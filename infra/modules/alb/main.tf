@@ -1,6 +1,9 @@
 variable "project" {}
 variable "vpc_id" {}
-variable "subnet_ids" { type = list(string) }
+
+variable "subnet_ids" {
+  type = list(string)
+}
 
 resource "aws_security_group" "alb" {
   name        = "${var.project}-alb-sg"
@@ -58,12 +61,21 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.api.arn
   port              = 80
   protocol          = "HTTP"
+
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.api.arn
   }
 }
 
-output "dns_name" { value = aws_lb.api.dns_name }
-output "target_group_arn" { value = aws_lb_target_group.api.arn }
-output "security_group_id" { value = aws_security_group.alb.id }
+output "dns_name" {
+  value = aws_lb.api.dns_name
+}
+
+output "target_group_arn" {
+  value = aws_lb_target_group.api.arn
+}
+
+output "security_group_id" {
+  value = aws_security_group.alb.id
+}

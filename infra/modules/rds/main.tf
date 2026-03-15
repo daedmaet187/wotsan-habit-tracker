@@ -1,7 +1,14 @@
 variable "project" {}
-variable "db_password" { sensitive = true }
+
+variable "db_password" {
+  sensitive = true
+}
+
 variable "vpc_id" {}
-variable "subnet_ids" { type = list(string) }
+
+variable "subnet_ids" {
+  type = list(string)
+}
 
 resource "aws_security_group" "rds" {
   name        = "${var.project}-rds-sg"
@@ -9,11 +16,13 @@ resource "aws_security_group" "rds" {
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Tighten in production
+    from_port = 5432
+    to_port   = 5432
+    protocol  = "tcp"
+    # PLACEHOLDER: restrict this to ECS task SG or private CIDR once network wiring is finalized.
+    cidr_blocks = ["0.0.0.0/0"]
   }
+
   egress {
     from_port   = 0
     to_port     = 0

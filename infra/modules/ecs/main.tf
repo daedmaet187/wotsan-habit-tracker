@@ -1,14 +1,27 @@
 variable "project" {}
 variable "image_url" {}
-variable "db_url" { sensitive = true }
-variable "jwt_secret" { sensitive = true }
+
+variable "db_url" {
+  sensitive = true
+}
+
+variable "jwt_secret" {
+  sensitive = true
+}
+
 variable "target_group_arn" {}
 variable "vpc_id" {}
-variable "subnet_ids" { type = list(string) }
+
+variable "subnet_ids" {
+  type = list(string)
+}
+
 variable "alb_security_group_id" {}
 
 resource "aws_iam_role" "ecs_execution" {
   name = "${var.project}-ecs-execution-role"
+
+  # PLACEHOLDER: if your org mandates pre-created IAM roles, replace this resource with an input execution_role_arn variable.
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -35,6 +48,7 @@ resource "aws_security_group" "ecs" {
     protocol        = "tcp"
     security_groups = [var.alb_security_group_id]
   }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -63,6 +77,8 @@ resource "aws_ecs_task_definition" "api" {
   container_definitions = jsonencode([{
     name         = "api"
     image        = var.image_url
+    cpu          = 256
+    memory       = 512
     essential    = true
     portMappings = [{ containerPort = 3000, hostPort = 3000 }]
     environment = [
@@ -103,4 +119,8 @@ resource "aws_ecs_service" "api" {
   }
 
   depends_on = [aws_iam_role_policy_attachment.ecs_execution]
+}
+
+output "security_group_id" {
+  value = aws_security_group.ecs.id
 }

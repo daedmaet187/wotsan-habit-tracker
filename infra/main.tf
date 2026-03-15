@@ -1,8 +1,15 @@
 terraform {
   required_providers {
-    aws        = { source = "hashicorp/aws", version = "~> 5.0" }
-    cloudflare = { source = "cloudflare/cloudflare", version = "~> 4.0" }
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+    cloudflare = {
+      source  = "cloudflare/cloudflare"
+      version = "~> 4.0"
+    }
   }
+
   backend "s3" {
     bucket = "wotsan-terraform-state"
     key    = "habit-tracker/terraform.tfstate"
@@ -10,11 +17,19 @@ terraform {
   }
 }
 
-provider "aws" { region = var.aws_region }
-provider "cloudflare" { api_token = var.cf_dns_token }
+provider "aws" {
+  region = var.aws_region
+}
+
+provider "cloudflare" {
+  api_token = var.cf_dns_token
+}
 
 # Look up default VPC and subnets dynamically
-data "aws_vpc" "default" { default = true }
+data "aws_vpc" "default" {
+  default = true
+}
+
 data "aws_subnets" "default" {
   filter {
     name   = "vpc-id"
