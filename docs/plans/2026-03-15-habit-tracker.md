@@ -2,11 +2,11 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build a fully automated, production-ready Habit Tracker with Flutter mobile app, Node.js backend, React + shadcn/ui admin dashboard, PostgreSQL database, deployed on AWS + Cloudflare via Terraform.
+**Goal:** Build a fully automated, production-ready Habit Tracker with Flutter mobile app, Node.js backend, React + shadcn/ui admin dashboard, PostgreSQL database, deployed on AWS + Cloudflare via OpenTofu.
 
-**Architecture:** Flutter mobile app talks to a Node.js REST API running on AWS ECS (Fargate), backed by PostgreSQL on AWS RDS. Admin dashboard is a React + shadcn/ui SPA deployed on Cloudflare Pages. All infra is managed via Terraform. CI/CD via GitHub Actions.
+**Architecture:** Flutter mobile app talks to a Node.js REST API running on AWS ECS (Fargate), backed by PostgreSQL on AWS RDS. Admin dashboard is a React + shadcn/ui SPA deployed on Cloudflare Pages. All infra is managed via OpenTofu. CI/CD via GitHub Actions.
 
-**Tech Stack:** Flutter (iOS + Android), Node.js + Express, PostgreSQL, React + shadcn/ui + Vite, Terraform, Docker, GitHub Actions, AWS (ECS Fargate + RDS + ECR + ALB), Cloudflare (Pages + DNS)
+**Tech Stack:** Flutter (iOS + Android), Node.js + Express, PostgreSQL, React + shadcn/ui + Vite, OpenTofu, Docker, GitHub Actions, AWS (ECS Fargate + RDS + ECR + ALB), Cloudflare (Pages + DNS)
 
 ---
 
@@ -49,7 +49,7 @@ curl -s -X POST \
   https://api.github.com/user/repos \
   -d '{
     "name": "wotsan-habit-tracker",
-    "description": "Habit Tracker - Flutter + Node.js + React + Terraform",
+    "description": "Habit Tracker - Flutter + Node.js + React + OpenTofu",
     "private": false,
     "auto_init": true
   }'
@@ -680,9 +680,9 @@ git push origin main
 
 ---
 
-## Phase 5: Infrastructure (Terraform)
+## Phase 5: Infrastructure (OpenTofu)
 
-### Task 11: Terraform Core Modules
+### Task 11: OpenTofu Core Modules
 
 **Files:**
 - Create: `infra/main.tf`
@@ -705,14 +705,14 @@ variable "jwt_secret" { sensitive = true }
 
 **Step 2: Create `infra/main.tf`**
 ```hcl
-terraform {
+tofu {
   required_providers {
     aws = { source = "hashicorp/aws", version = "~> 5.0" }
     cloudflare = { source = "cloudflare/cloudflare", version = "~> 4.0" }
   }
   backend "s3" {
-    bucket = "wotsan-terraform-state"
-    key    = "habit-tracker/terraform.tfstate"
+    bucket = "wotsan-opentofu-state"
+    key    = "habit-tracker/opentofu.tfstate"
     region = "eu-central-1"
   }
 }
@@ -773,7 +773,7 @@ resource "cloudflare_record" "api" {
 **Step 6: Commit**
 ```bash
 git add infra/
-git commit -m "feat(infra): Terraform modules for ECR, RDS, ECS, ALB, Cloudflare"
+git commit -m "feat(infra): OpenTofu modules for ECR, RDS, ECS, ALB, Cloudflare"
 git push origin main
 ```
 
@@ -862,17 +862,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
-      - name: Terraform Init
-        run: terraform -chdir=infra init
+      - uses: opentofu/setup-opentofu@v1
+      - name: OpenTofu Init
+        run: tofu -chdir=infra init
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      - name: Terraform Plan
-        run: terraform -chdir=infra plan
-      - name: Terraform Apply
+      - name: OpenTofu Plan
+        run: tofu -chdir=infra plan
+      - name: OpenTofu Apply
         if: github.ref == 'refs/heads/main'
-        run: terraform -chdir=infra apply -auto-approve
+        run: tofu -chdir=infra apply -auto-approve
 ```
 
 **Step 4: Add GitHub Secrets**
@@ -893,27 +893,27 @@ git push origin main
 
 ---
 
-## Phase 7: Bootstrap Terraform State & Deploy
+## Phase 7: Bootstrap OpenTofu State & Deploy
 
-### Task 13: Create S3 Terraform State Bucket
+### Task 13: Create S3 OpenTofu State Bucket
 
 **Step 1: Create S3 bucket for state**
 ```bash
 aws s3api create-bucket \
-  --bucket wotsan-terraform-state \
+  --bucket wotsan-opentofu-state \
   --region eu-central-1 \
   --create-bucket-configuration LocationConstraint=eu-central-1
 
 aws s3api put-bucket-versioning \
-  --bucket wotsan-terraform-state \
+  --bucket wotsan-opentofu-state \
   --versioning-configuration Status=Enabled
 ```
 
-**Step 2: Terraform init + apply**
+**Step 2: OpenTofu init + apply**
 ```bash
 cd infra
-terraform init
-terraform apply -var="db_password=<strong-password>" -var="cf_dns_token=$CF_DNS_TOKEN" -var="jwt_secret=<jwt-secret>"
+tofu init
+tofu apply -var="db_password=<strong-password>" -var="cf_dns_token=$CF_DNS_TOKEN" -var="jwt_secret=<jwt-secret>"
 ```
 
 **Step 3: Run DB migrations**
@@ -939,6 +939,6 @@ aws ecs run-task \
 | 2 | Backend API | ⬜ |
 | 3 | Admin Dashboard | ⬜ |
 | 4 | Flutter Mobile | ⬜ |
-| 5 | Terraform Infra | ⬜ |
+| 5 | OpenTofu Infra | ⬜ |
 | 6 | CI/CD Pipelines | ⬜ |
 | 7 | Deploy | ⬜ |

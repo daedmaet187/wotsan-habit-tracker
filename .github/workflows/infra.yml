@@ -5,24 +5,24 @@ on:
     paths: [infra/**]
 
 jobs:
-  terraform:
+  opentofu:
     runs-on: ubuntu-latest
     environment: production # Use GitHub Environments for secret control
     steps:
       - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: opentofu/setup-opentofu@v1
 
-      - name: Terraform Init
-        run: terraform -chdir=infra init
+      - name: OpenTofu Init
+        run: tofu -chdir=infra init
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform Plan
-        run: terraform -chdir=infra plan -out=tfplan
+      - name: OpenTofu Plan
+        run: tofu -chdir=infra plan -out=tfplan
 
-      - name: Terraform Apply
-        run: terraform -chdir=infra apply -auto-approve tfplan
+      - name: OpenTofu Apply
+        run: tofu -chdir=infra apply -auto-approve tfplan
         env:
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           CF_DNS_TOKEN: ${{ secrets.CF_DNS_TOKEN }}

@@ -6,7 +6,7 @@ Habit Tracker — Flutter mobile app, Node.js API, React + shadcn/ui admin dashb
 - `backend/` — Node.js + Express API
 - `admin/` — React + Vite + shadcn/ui dashboard
 - `mobile/` — Flutter iOS + Android app
-- `infra/` — Terraform (AWS + Cloudflare)
+- `infra/` — OpenTofu (AWS + Cloudflare)
 - `.github/workflows/` — CI/CD pipelines
 
 ## Subdomains

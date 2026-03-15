@@ -11,8 +11,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "wotsan-terraform-state"
-    key    = "habit-tracker/terraform.tfstate"
+    bucket = "wotsan-opentofu-state"
+    key    = "habit-tracker/opentofu.tfstate"
     region = "eu-central-1"
   }
 }
