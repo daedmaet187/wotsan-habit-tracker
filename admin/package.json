@@ -13,6 +13,7 @@
     "@tanstack/react-query": "5.40.1",
     "@radix-ui/react-slot": "^1.0.2",
     "axios": "^1.7.2",
+    "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.378.0",
     "react": "^18.3.1",
@@ -33,4 +34,3 @@
     "vite": "^5.2.0"
   }
 }
-EOF; npm install; npx shadcn-ui@latest init --yes; npx shadcn-ui@latest add button card table badge input dialog navigation-menu sheet --yes
