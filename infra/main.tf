@@ -43,11 +43,12 @@ module "ecr" {
 }
 
 module "rds" {
-  source      = "./modules/rds"
-  project     = var.project
-  db_password = var.db_password
-  vpc_id      = data.aws_vpc.default.id
-  subnet_ids  = data.aws_subnets.default.ids
+  source                = "./modules/rds"
+  project               = var.project
+  db_password           = var.db_password
+  vpc_id                = data.aws_vpc.default.id
+  subnet_ids            = data.aws_subnets.default.ids
+  ecs_security_group_id = module.ecs.security_group_id
 }
 
 module "alb" {
@@ -70,6 +71,7 @@ module "ecs" {
 }
 
 module "cloudflare" {
-  source  = "./modules/cloudflare"
-  alb_dns = module.alb.dns_name
+  source             = "./modules/cloudflare"
+  alb_dns            = module.alb.dns_name
+  cloudflare_zone_id = var.cloudflare_zone_id
 }
