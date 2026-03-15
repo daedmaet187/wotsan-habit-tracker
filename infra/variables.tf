@@ -14,7 +14,9 @@ variable "cf_dns_token" {
   sensitive = true
 }
 
-variable "cloudflare_zone_id" {}
+variable "cloudflare_zone_id" {
+  type = string
+}
 
 variable "jwt_secret" {
   sensitive = true

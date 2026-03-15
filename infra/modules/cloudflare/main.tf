@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    cloudflare = {
+      source = "cloudflare/cloudflare"
+    }
+  }
+}
+
 resource "cloudflare_record" "api" {
   zone_id = var.cloudflare_zone_id
   name    = "habit-api"
