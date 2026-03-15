@@ -14,9 +14,18 @@ class ApiService {
     }));
   }
 
+  // ... other methods omitted for brevity ...
   Future<Map<String, dynamic>> login(String email, String password) async {
     final res = await _dio.post('/api/auth/login', data: {'email': email, 'password': password});
     return res.data;
   }
-  // ... other methods omitted for brevity ...
+
+  Future<List<dynamic>> getHabits() async {
+    final res = await _dio.get('/api/habits');
+    return res.data;
+  }
+
+  Future<void> logHabit(String habitId, String date) async {
+    await _dio.post('/api/logs', data: {'habit_id': habitId, 'logged_date': date});
+  }
 }
