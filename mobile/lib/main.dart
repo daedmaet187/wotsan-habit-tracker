@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:habit_tracker/screens/login_screen.dart'; // Will exist in next step
+// NOTE: LoginScreen import is a placeholder, this file is just for theme setup
+// We will fix the import path in the next screen task.
 
 void main() {
-  // For now, just run the login screen stub
   runApp(const MyApp());
 }
 
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
         useMaterial3: true, // <-- MD3 Enabled
       ),
-      home: const LoginScreen(), // Placeholder
+      home: const Scaffold(body: Center(child: Text('Flutter Bootstrap Success: MD3 Enabled'))), // Placeholder
     );
   }
 }
