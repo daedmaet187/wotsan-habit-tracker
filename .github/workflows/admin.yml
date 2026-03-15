@@ -1,0 +1,31 @@
+name: Admin CI/CD
+on:
+  push:
+    branches: [main]
+    paths: [admin/**]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Install Dependencies and Build
+        run: |
+          cd admin
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://habit-api.stuff187.com # Hardcoded for now, will become dynamic later
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CF_WORKERS_TOKEN }} # Using Workers token for Pages deployment
+          accountId: ${{ secrets.CF_ACCOUNT_ID }} # Must be set in GitHub Secrets
+          projectName: habit-admin # Must be set in GitHub Secrets
+          directory: admin/dist

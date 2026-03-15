@@ -1,0 +1,49 @@
+name: Backend CI/CD
+on:
+  push:
+    branches: [main]
+    paths: [backend/**, infra/**] # Trigger on backend or infra change
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- AWS Setup ---
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- Build/Push ---
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build, tag, and push the image to ECR
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY_URL }} # Must be set in GitHub Secrets
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE=${ECR_REGISTRY}/${{ github.repository_name }}-api:${IMAGE_TAG}
+          docker build -t $IMAGE ./backend
+          docker push $IMAGE
+          echo "IMAGE_URI=$IMAGE" >> $GITHUB_ENV
+
+      # --- Deploy to ECS ---
+      - name: Deploy to Amazon ECS
+        run: |
+          aws ecs update-service \
+            --cluster wotsan-habit-tracker-cluster \
+            --service wotsan-habit-tracker-api \
+            --task-definition wotsan-habit-tracker-api \
+            --force-new-deployment
