@@ -1,0 +1,27 @@
+name: habit_tracker
+description: A new Flutter project.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  dio: ^5.4.3 # For API
+  shared_preferences: ^2.2.2 # For local storage (token)
+  flutter_riverpod: ^2.5.1 # For state management
+  go_router: ^13.2.0 # For navigation
+  intl: ^0.19.0 # For date formatting
+  recharts: ^2.12.7 # For admin dashboard activity charts (if shared/needed)
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.9 # For code generation later
+
+flutter:
+  uses-material-design: true

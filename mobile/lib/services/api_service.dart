@@ -1,12 +1,22 @@
-import package:dio/dio.dart;
-import package:shared_preferences/shared_preferences.dart;
+import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const baseUrl = String.fromEnvironment(API_URL, defaultValue: https://habit-api.stuff187.com);
+  static const baseUrl = String.fromEnvironment('API_URL', defaultValue: 'https://habit-api.stuff187.com');
   final Dio _dio = Dio(BaseOptions(baseUrl: baseUrl));
 
   ApiService() {
     _dio.interceptors.add(InterceptorsWrapper(onRequest: (options, handler) async {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(token);
-      if (token != null) options.headers[Authorization] = Bearer
+      final token = prefs.getString('token');
+      if (token != null) options.headers['Authorization'] = 'Bearer $token';
+      handler.next(options);
+    }));
+  }
+
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    final res = await _dio.post('/api/auth/login', data: {'email': email, 'password': password});
+    return res.data;
+  }
+  // ... other methods omitted for brevity ...
+}
