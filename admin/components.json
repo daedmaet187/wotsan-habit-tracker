@@ -1,0 +1,13 @@
+{
+  "$schema": "https://ui.shadcn.com/docs/components.schema.json",
+  "style": "default",
+  "tsx": false,
+  "tsSdkStyle": "cva",
+  "baseColor": "slate",
+  "cssVariables": true,
+  "prefix": "",
+  "handler": "npm",
+  "componentPath": "src/components/ui",
+  "componentExtension": ".jsx",
+  "utilsPath": "src/lib/utils"
+}
