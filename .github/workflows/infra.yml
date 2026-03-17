@@ -7,7 +7,7 @@ on:
 jobs:
   opentofu:
     runs-on: ubuntu-latest
-    environment: production # Use GitHub Environments for secret control
+    environment: production
     steps:
       - uses: actions/checkout@v4
       - uses: opentofu/setup-opentofu@v1
@@ -17,13 +17,27 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
 
       - name: OpenTofu Plan
-        run: tofu -chdir=infra plan -out=tfplan
+        run: |
+          tofu -chdir=infra plan -out=tfplan \
+            -var="db_password=$DB_PASSWORD" \
+            -var="jwt_secret=$JWT_SECRET" \
+            -var="cf_dns_token=$CF_DNS_TOKEN" \
+            -var="cloudflare_zone_id=$CF_ZONE_ID"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          CF_DNS_TOKEN: ${{ secrets.CF_DNS_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
 
       - name: OpenTofu Apply
         run: tofu -chdir=infra apply -auto-approve tfplan
         env:
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          CF_DNS_TOKEN: ${{ secrets.CF_DNS_TOKEN }}
-          JWT_SECRET: 'GENERATED_SECRET_ON_DEPLOY' # Will use a better mechanism later
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: eu-central-1

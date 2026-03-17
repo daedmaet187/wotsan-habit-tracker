@@ -31,10 +31,10 @@ jobs:
 
       - name: Build, tag, and push the image to ECR
         env:
-          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY_URL }} # Must be set in GitHub Secrets
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY_URL }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          IMAGE=${ECR_REGISTRY}/${{ github.repository_name }}-api:${IMAGE_TAG}
+          IMAGE=${ECR_REGISTRY}/wotsan-habit-tracker-api:${IMAGE_TAG}
           docker build -t $IMAGE ./backend
           docker push $IMAGE
           echo "IMAGE_URI=$IMAGE" >> $GITHUB_ENV
