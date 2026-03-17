@@ -35,13 +35,19 @@ module "ecr" {
   project = var.project
 }
 
+data "aws_security_group" "ecs" {
+  name   = "${var.project}-ecs-sg"
+  vpc_id = module.network.vpc_id
+}
+
 module "rds" {
-  source              = "./modules/rds"
-  project             = var.project
-  db_password         = var.db_password
-  vpc_id              = module.network.vpc_id
-  subnet_ids          = module.network.private_subnet_ids
-  allowed_cidr_blocks = module.network.private_subnet_cidrs
+  source                = "./modules/rds"
+  project               = var.project
+  db_password           = var.db_password
+  vpc_id                = module.network.vpc_id
+  subnet_ids            = module.network.private_subnet_ids
+  allowed_cidr_blocks   = module.network.private_subnet_cidrs
+  ecs_security_group_id = data.aws_security_group.ecs.id
 }
 
 module "alb" {
