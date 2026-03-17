@@ -9,3 +9,4 @@ build/
 *.tfstate.backup
 .flutter-plugins
 .flutter-plugins-dependencies
+infra/tfplan

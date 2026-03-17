@@ -9,7 +9,7 @@ exports.register = async (req, res) => {
     const hash = await bcrypt.hash(password, 12);
     const { rows } = await pool.query(
       'INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3) RETURNING id, email, full_name, role',
-      [email, full_name]
+      [email, hash, full_name]
     );
     const token = jwt.sign({ id: rows[0].id, role: rows[0].role }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
     res.status(201).json({ user: rows[0], token });
