@@ -25,16 +25,9 @@ provider "cloudflare" {
   api_token = var.cf_dns_token
 }
 
-# Look up default VPC and subnets dynamically
-data "aws_vpc" "default" {
-  default = true
-}
-
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
+module "network" {
+  source  = "./modules/network"
+  project = var.project
 }
 
 module "ecr" {
@@ -43,19 +36,19 @@ module "ecr" {
 }
 
 module "rds" {
-  source                = "./modules/rds"
-  project               = var.project
-  db_password           = var.db_password
-  vpc_id                = data.aws_vpc.default.id
-  subnet_ids            = data.aws_subnets.default.ids
-  ecs_security_group_id = module.ecs.security_group_id
+  source              = "./modules/rds"
+  project             = var.project
+  db_password         = var.db_password
+  vpc_id              = module.network.vpc_id
+  subnet_ids          = module.network.private_subnet_ids
+  allowed_cidr_blocks = module.network.private_subnet_cidrs
 }
 
 module "alb" {
   source     = "./modules/alb"
   project    = var.project
-  vpc_id     = data.aws_vpc.default.id
-  subnet_ids = data.aws_subnets.default.ids
+  vpc_id     = module.network.vpc_id
+  subnet_ids = module.network.public_subnet_ids
 }
 
 module "ecs" {
@@ -65,8 +58,8 @@ module "ecs" {
   db_url                = module.rds.connection_string
   jwt_secret            = var.jwt_secret
   target_group_arn      = module.alb.target_group_arn
-  vpc_id                = data.aws_vpc.default.id
-  subnet_ids            = data.aws_subnets.default.ids
+  vpc_id                = module.network.vpc_id
+  subnet_ids            = module.network.public_subnet_ids
   alb_security_group_id = module.alb.security_group_id
 }
 

@@ -2,18 +2,18 @@ variable "project" {}
 variable "db_password" { sensitive = true }
 variable "vpc_id" {}
 variable "subnet_ids" { type = list(string) }
-variable "ecs_security_group_id" {}
+variable "allowed_cidr_blocks" { type = list(string) }
 
 resource "aws_security_group" "rds" {
   name        = "${var.project}-rds-sg"
-  description = "Allow PostgreSQL from ECS"
+  description = "Allow PostgreSQL from app subnets"
   vpc_id      = var.vpc_id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [var.ecs_security_group_id]
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = var.allowed_cidr_blocks
   }
 
   egress {
