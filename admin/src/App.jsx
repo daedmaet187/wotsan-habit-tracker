@@ -1,40 +1,54 @@
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import { Button } from "./components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "./components/ui/card";
-
-// Placeholder for Dashboard to satisfy Router dependencies
-const Dashboard = () => (
-  <Card className="w-full max-w-4xl mx-auto">
-    <CardHeader>
-      <CardTitle>Admin Dashboard</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p>Welcome to the Admin Interface.</p>
-      <div className="mt-4 space-y-2">
-        <Button>View Users</Button>
-        <Button variant="secondary">Reports</Button>
-      </div>
-    </CardContent>
-  </Card>
-);
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import Layout from '@/components/Layout';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import Dashboard from '@/pages/Dashboard';
+import Users from '@/pages/Users';
+import Habits from '@/pages/Habits';
+import Login from '@/pages/Login';
 
 function App() {
   return (
-    <Router>
-      <div className="min-h-screen bg-background text-foreground p-4">
-        <header className="border-b pb-2 mb-6 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Habit Tracker Admin</h1>
-          <nav>
-            <Link to="/">
-              <Button variant="outline">Dashboard</Button>
-            </Link>
-          </nav>
-        </header>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-        </Routes>
-      </div>
-    </Router>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/dashboard"
+          element={(
+            <ProtectedRoute>
+              <Layout>
+                <Dashboard />
+              </Layout>
+            </ProtectedRoute>
+          )}
+        />
+
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Users />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/habits"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Habits />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

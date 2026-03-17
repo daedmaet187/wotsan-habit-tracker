@@ -1,34 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Users, Activity, CheckSquare } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Activity, CheckSquare, Users } from 'lucide-react';
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import api from '@/lib/api';
 
 export default function Dashboard() {
-  const { data: users = [] } = useQuery({
-    queryKey: ['admin-users'],
-    queryFn: () => api.get('/api/admin/users').then(r => r.data).catch(() => []),
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: () => api.get('/api/admin/stats').then((r) => r.data),
   });
 
-  const { data: habits = [] } = useQuery({
-    queryKey: ['admin-habits'],
-    queryFn: () => api.get('/api/admin/habits').then(r => r.data).catch(() => []),
-  });
+  const activityData = (stats?.logs_per_day || []).map((item) => ({
+    date: new Date(item.date).toLocaleDateString('en-US', { weekday: 'short' }),
+    logs: item.count,
+  }));
 
-  // Mock chart data for now (will be replaced when admin API endpoints exist)
-  const activityData = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - (6 - i));
-    return {
-      date: d.toLocaleDateString('en-US', { weekday: 'short' }),
-      logs: Math.floor(Math.random() * 50) + 10,
-    };
-  });
-
-  const stats = [
-    { label: 'Total Users', value: users.length || '—', icon: Users, color: 'text-blue-500' },
-    { label: 'Total Habits', value: habits.length || '—', icon: Activity, color: 'text-green-500' },
-    { label: 'Active Today', value: '—', icon: CheckSquare, color: 'text-purple-500' },
+  const cards = [
+    { label: 'Total Users', value: stats?.total_users ?? '—', icon: Users, color: 'text-blue-500' },
+    { label: 'Total Habits', value: stats?.total_habits ?? '—', icon: Activity, color: 'text-green-500' },
+    { label: 'Active Today', value: stats?.logs_today ?? '—', icon: CheckSquare, color: 'text-purple-500' },
   ];
 
   return (
@@ -38,22 +28,20 @@ export default function Dashboard() {
         <p className="text-muted-foreground">Welcome back, Admin</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {stats.map(({ label, value, icon: Icon, color }) => (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {cards.map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
               <Icon className={`h-5 w-5 ${color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{value}</div>
+              <div className="text-3xl font-bold">{isLoading ? '…' : value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Activity Chart */}
       <Card>
         <CardHeader>
           <CardTitle>Activity (Last 7 Days)</CardTitle>
