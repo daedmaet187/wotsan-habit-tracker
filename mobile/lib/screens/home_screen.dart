@@ -19,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = true;
   List<Habit> _habits = [];
   Set<String> _loggedToday = <String>{};
+  Map<String, String> _logIdsByHabit = <String, String>{};
 
   String get _today => DateFormat('yyyy-MM-dd').format(DateTime.now());
   String get _todayPretty => DateFormat('EEE, MMM d').format(DateTime.now());
@@ -36,14 +37,23 @@ class _HomeScreenState extends State<HomeScreen> {
       final habitsRes = await _apiService.getHabits();
       final logsRes = await _apiService.getLogsByDate(_today);
 
+      final logsByHabit = <String, String>{};
+      for (final item in logsRes) {
+        final log = Map<String, dynamic>.from(item as Map);
+        final habitId = log['habit_id']?.toString();
+        final logId = log['id']?.toString();
+        if (habitId != null && logId != null) {
+          logsByHabit[habitId] = logId;
+        }
+      }
+
       setState(() {
         _habits = habitsRes
             .map((e) => Habit.fromJson(Map<String, dynamic>.from(e as Map)))
             .where((h) => h.isActive)
             .toList();
-        _loggedToday = logsRes
-            .map((e) => Map<String, dynamic>.from(e as Map)['habit_id'].toString())
-            .toSet();
+        _loggedToday = logsByHabit.keys.toSet();
+        _logIdsByHabit = logsByHabit;
       });
     } catch (_) {
       if (!mounted) return;
@@ -56,15 +66,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleHabit(Habit habit, bool checked) async {
-    if (!checked) {
-      setState(() => _loggedToday.remove(habit.id));
-      return;
-    }
-
     try {
+      if (!checked) {
+        final logId = _logIdsByHabit[habit.id];
+        if (logId == null) return;
+        await _apiService.deleteLog(logId);
+        if (!mounted) return;
+        setState(() {
+          _loggedToday.remove(habit.id);
+          _logIdsByHabit.remove(habit.id);
+        });
+        return;
+      }
+
       await _apiService.logHabit(habit.id, _today);
-      if (!mounted) return;
-      setState(() => _loggedToday.add(habit.id));
+      await _loadData();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

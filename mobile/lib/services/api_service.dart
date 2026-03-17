@@ -64,4 +64,8 @@ class ApiService {
     final res = await _dio.get('/api/logs', queryParameters: {'date': date});
     return List<dynamic>.from(res.data as List);
   }
+
+  Future<void> deleteLog(String logId) async {
+    await _dio.delete('/api/logs/$logId');
+  }
 }

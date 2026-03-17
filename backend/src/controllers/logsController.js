@@ -33,6 +33,19 @@ exports.getByDate = async (req, res) => {
   }
 };
 
+exports.remove = async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      'DELETE FROM habit_logs WHERE id=$1 AND user_id=$2',
+      [req.params.id, req.user.id]
+    );
+    if (rowCount === 0) return res.status(404).json({ error: 'Log not found or unauthorized' });
+    res.status(204).send();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.getStreak = async (req, res) => {
   try {
     const { rows } = await pool.query(
