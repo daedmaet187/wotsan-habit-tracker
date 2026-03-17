@@ -1,94 +1,157 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatRelativeTime } from '@/lib/utils';
 import api from '@/lib/api';
+
+const filterOptions = ['All', 'Admins', 'Active', 'Inactive'];
+
+const getFilteredUsers = (users, search, filter) => {
+  const q = search.toLowerCase();
+  return users
+    .filter((user) => {
+      const email = (user.email || '').toLowerCase();
+      const name = (user.full_name || '').toLowerCase();
+      return email.includes(q) || name.includes(q);
+    })
+    .filter((user) => {
+      if (filter === 'Admins') return user.role === 'admin';
+      if (filter === 'Active') return user.is_active !== false;
+      if (filter === 'Inactive') return user.is_active === false;
+      return true;
+    });
+};
 
 export default function Users() {
   const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('All');
   const queryClient = useQueryClient();
 
-  const { data: users = [], isLoading } = useQuery({
+  const { data: users = [], isLoading, isError } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => api.get('/api/admin/users').then((r) => r.data),
   });
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+  };
+
   const roleMutation = useMutation({
     mutationFn: ({ id, role }) => api.patch(`/api/admin/users/${id}/role`, { role }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-    },
+    onSuccess: invalidate,
   });
 
-  const filtered = users.filter(
-    (user) =>
-      user.email?.toLowerCase().includes(search.toLowerCase()) ||
-      user.full_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const statusMutation = useMutation({
+    mutationFn: ({ id, is_active }) => api.patch(`/api/admin/users/${id}/status`, { is_active }),
+    onSuccess: invalidate,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => api.delete(`/api/admin/users/${id}`),
+    onSuccess: invalidate,
+  });
+
+  const filtered = useMemo(() => getFilteredUsers(users, search, filter), [users, search, filter]);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Users</h2>
-        <p className="text-muted-foreground">Manage registered users</p>
+        <p className="text-muted-foreground">Manage accounts, access level, and account status.</p>
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>All Users ({users.length})</CardTitle>
             <Input
-              placeholder="Search users..."
+              placeholder="Search by email or name..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="max-w-xs"
+              className="w-full sm:max-w-sm"
             />
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {filterOptions.map((option) => (
+              <Button
+                key={option}
+                size="sm"
+                variant={filter === option ? 'default' : 'outline'}
+                onClick={() => setFilter(option)}
+              >
+                {option}
+              </Button>
+            ))}
           </div>
         </CardHeader>
 
         <CardContent>
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading...</p>
-          ) : (
-            <div className="rounded-md border">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="h-10 px-4 text-left font-medium">Email</th>
-                    <th className="h-10 px-4 text-left font-medium">Full Name</th>
-                    <th className="h-10 px-4 text-left font-medium">Role</th>
-                    <th className="h-10 px-4 text-left font-medium">Habits Count</th>
-                    <th className="h-10 px-4 text-left font-medium">Joined</th>
-                    <th className="h-10 px-4 text-left font-medium">Actions</th>
-                  </tr>
-                </thead>
+          {isLoading ? <p className="text-sm text-muted-foreground">Loading users...</p> : null}
+          {isError ? <p className="text-sm text-destructive">Failed to load users.</p> : null}
 
-                <tbody>
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="h-24 text-center text-muted-foreground">
-                        No users found
-                      </td>
-                    </tr>
-                  ) : (
-                    filtered.map((user) => {
-                      const nextRole = user.role === 'admin' ? 'user' : 'admin';
+          {!isLoading && !isError ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Habits</TableHead>
+                  <TableHead>Total Logs</TableHead>
+                  <TableHead>Last Active</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                      No users found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((user) => {
+                    const initial = (user.email || '?').charAt(0).toUpperCase();
+                    const nextRole = user.role === 'admin' ? 'user' : 'admin';
+                    const nextStatus = user.is_active === false;
 
-                      return (
-                        <tr key={user.id} className="border-b transition-colors hover:bg-muted/30">
-                          <td className="px-4 py-3 text-muted-foreground">{user.email}</td>
-                          <td className="px-4 py-3 font-medium">{user.full_name || '—'}</td>
-                          <td className="px-4 py-3">
-                            <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role}</Badge>
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">{user.habit_count ?? 0}</td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {user.created_at ? new Date(user.created_at).toLocaleDateString() : '—'}
-                          </td>
-                          <td className="px-4 py-3">
+                    return (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
+                              {initial}
+                            </span>
+                            <div>
+                              <p className="font-medium">{user.email}</p>
+                              <p className="text-xs text-muted-foreground">{user.full_name || 'No full name'}</p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>{user.role || 'user'}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={user.is_active === false ? 'bg-destructive/15 text-destructive' : 'bg-emerald-500/15 text-emerald-700'}
+                          >
+                            {user.is_active === false ? 'Inactive' : 'Active'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{user.habit_count ?? 0}</TableCell>
+                        <TableCell>{user.total_logs ?? 0}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {formatRelativeTime(user.last_active_at || user.updated_at || user.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-end gap-2">
                             <Button
                               size="sm"
                               variant="outline"
@@ -97,15 +160,34 @@ export default function Users() {
                             >
                               Make {nextRole}
                             </Button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={statusMutation.isPending}
+                              onClick={() => statusMutation.mutate({ id: user.id, is_active: nextStatus })}
+                            >
+                              {user.is_active === false ? 'Activate' : 'Deactivate'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={deleteMutation.isPending}
+                              onClick={() => {
+                                const ok = window.confirm('This will delete all their habits and logs. Are you sure?');
+                                if (ok) deleteMutation.mutate(user.id);
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          ) : null}
         </CardContent>
       </Card>
     </div>

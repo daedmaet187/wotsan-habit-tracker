@@ -1,12 +1,14 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Activity, LogOut } from 'lucide-react';
+import { Activity, BarChart2, LayoutDashboard, ListChecks, LogOut, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/users', label: 'Users', icon: Users },
-  { to: '/habits', label: 'Habits', icon: Activity },
+  { to: '/habits', label: 'Habits', icon: ListChecks },
+  { to: '/analytics', label: 'Analytics', icon: BarChart2 },
+  { to: '/activity', label: 'Activity', icon: Activity },
 ];
 
 export default function Layout({ children }) {
@@ -20,7 +22,6 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Sidebar */}
       <aside className="w-64 border-r flex flex-col">
         <div className="p-6 border-b">
           <h1 className="text-xl font-bold">Habit Tracker</h1>
@@ -29,12 +30,14 @@ export default function Layout({ children }) {
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to}>
-              <div className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
-                location.pathname === to
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent hover:text-accent-foreground"
-              )}>
+              <div
+                className={cn(
+                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                  location.pathname === to
+                    ? 'bg-primary text-primary-foreground'
+                    : 'hover:bg-accent hover:text-accent-foreground'
+                )}
+              >
                 <Icon className="h-4 w-4" />
                 {label}
               </div>
@@ -49,10 +52,7 @@ export default function Layout({ children }) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto p-8">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto p-8">{children}</main>
     </div>
   );
 }

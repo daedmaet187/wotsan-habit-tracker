@@ -4,6 +4,8 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import Dashboard from '@/pages/Dashboard';
 import Users from '@/pages/Users';
 import Habits from '@/pages/Habits';
+import Analytics from '@/pages/Analytics';
+import Activity from '@/pages/Activity';
 import Login from '@/pages/Login';
 
 function App() {
@@ -40,6 +42,28 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Habits />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Analytics />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/activity"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Activity />
               </Layout>
             </ProtectedRoute>
           }
