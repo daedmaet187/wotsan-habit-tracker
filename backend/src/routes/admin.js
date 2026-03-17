@@ -8,9 +8,13 @@ router.use(auth, adminAuth);
 router.get('/users', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT u.id, u.email, u.full_name, u.role, u.created_at, COUNT(h.id)::int AS habit_count
+      `SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.created_at,
+              COUNT(DISTINCT h.id)::int AS habit_count,
+              COUNT(DISTINCT hl.id)::int AS total_logs,
+              MAX(hl.logged_date) AS last_active
        FROM users u
        LEFT JOIN habits h ON h.user_id = u.id
+       LEFT JOIN habit_logs hl ON hl.user_id = u.id
        GROUP BY u.id
        ORDER BY u.created_at DESC`
     );
@@ -24,10 +28,14 @@ router.get('/users', async (req, res) => {
 router.get('/habits', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `SELECT h.id, h.name, h.user_id, u.email AS user_email, h.frequency, h.is_active, h.created_at
+      `SELECT h.id, h.name, h.user_id, u.email AS user_email, h.frequency,
+              h.is_active, h.created_at, h.color,
+              COUNT(hl.id)::int AS log_count
        FROM habits h
        JOIN users u ON u.id = h.user_id
-       ORDER BY h.created_at DESC`
+       LEFT JOIN habit_logs hl ON hl.habit_id = h.id
+       GROUP BY h.id, u.email
+       ORDER BY log_count DESC, h.created_at DESC`
     );
 
     res.json(rows);
@@ -71,6 +79,82 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+router.get('/analytics', async (req, res) => {
+  try {
+    const [
+      userGrowth,
+      completionTrend,
+      dayOfWeek,
+      topHabits,
+      retentionResult,
+    ] = await Promise.all([
+      pool.query(`
+        SELECT day::date AS date, COUNT(u.id)::int AS new_users
+        FROM generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day') AS day
+        LEFT JOIN users u ON u.created_at::date = day::date
+        GROUP BY day ORDER BY day
+      `),
+      pool.query(`
+        SELECT day::date AS date,
+          COUNT(hl.id)::int AS total_logs,
+          (SELECT COUNT(*)::int FROM habits WHERE is_active = true) AS active_habits
+        FROM generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day') AS day
+        LEFT JOIN habit_logs hl ON hl.logged_date = day::date
+        GROUP BY day ORDER BY day
+      `),
+      pool.query(`
+        SELECT EXTRACT(DOW FROM logged_date)::int AS dow,
+               COUNT(*)::int AS total_logs
+        FROM habit_logs
+        WHERE logged_date >= CURRENT_DATE - INTERVAL '90 days'
+        GROUP BY dow ORDER BY dow
+      `),
+      pool.query(`
+        SELECT h.id, h.name, h.frequency, u.email AS user_email,
+               COUNT(hl.id)::int AS log_count
+        FROM habits h
+        JOIN users u ON u.id = h.user_id
+        LEFT JOIN habit_logs hl ON hl.habit_id = h.id
+        WHERE h.is_active = true
+        GROUP BY h.id, h.name, h.frequency, u.email
+        ORDER BY log_count DESC LIMIT 10
+      `),
+      pool.query(`
+        SELECT COUNT(DISTINCT user_id)::int AS active_this_week
+        FROM habit_logs
+        WHERE logged_date >= DATE_TRUNC('week', CURRENT_DATE)::date
+      `),
+    ]);
+
+    res.json({
+      user_growth: userGrowth.rows,
+      completion_trend: completionTrend.rows,
+      day_of_week: dayOfWeek.rows,
+      top_habits: topHabits.rows,
+      active_this_week: retentionResult.rows[0].active_this_week,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/activity', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT hl.id, hl.logged_date, hl.created_at,
+             u.email AS user_email, u.full_name AS user_name,
+             h.name AS habit_name, h.color AS habit_color, h.frequency
+      FROM habit_logs hl
+      JOIN habits h ON h.id = hl.habit_id
+      JOIN users u ON u.id = hl.user_id
+      ORDER BY hl.created_at DESC LIMIT 50
+    `);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.patch('/users/:id/role', async (req, res) => {
   const { role } = req.body;
 
@@ -89,6 +173,36 @@ router.patch('/users/:id/role', async (req, res) => {
     }
 
     res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/users/:id/status', async (req, res) => {
+  const { is_active } = req.body;
+  if (typeof is_active !== 'boolean') {
+    return res.status(400).json({ error: 'is_active must be a boolean' });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'UPDATE users SET is_active = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, full_name, role, is_active',
+      [is_active, req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'User not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/users/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM habit_logs WHERE user_id = $1', [req.params.id]);
+    await pool.query('DELETE FROM habits WHERE user_id = $1', [req.params.id]);
+    const { rowCount } = await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    if (rowCount === 0) return res.status(404).json({ error: 'User not found' });
+    res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
