@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -67,5 +68,15 @@ class ApiService {
 
   Future<void> deleteLog(String logId) async {
     await _dio.delete('/api/logs/$logId');
+  }
+
+  Future<Map<String, List<dynamic>>> getRecentLogs(int days) async {
+    final today = DateTime.now();
+    final dates = List.generate(days, (i) {
+      final d = today.subtract(Duration(days: i));
+      return DateFormat('yyyy-MM-dd').format(d);
+    });
+    final results = await Future.wait(dates.map(getLogsByDate));
+    return Map.fromIterables(dates, results);
   }
 }

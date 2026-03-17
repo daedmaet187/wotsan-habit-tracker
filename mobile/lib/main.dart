@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'screens/habits_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/stats_screen.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -21,11 +23,6 @@ class HabitTrackerApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
         useMaterial3: true,
       ),
-      routes: {
-        '/login': (_) => const LoginScreen(),
-        '/home': (_) => const HomeScreen(),
-        '/habits': (_) => const HabitsScreen(),
-      },
       home: const AuthGate(),
     );
   }
@@ -64,6 +61,36 @@ class _AuthGateState extends State<AuthGate> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    return _isLoggedIn ? const HomeScreen() : const LoginScreen();
+    return _isLoggedIn ? const MainScaffold() : const LoginScreen();
+  }
+}
+
+class MainScaffold extends StatefulWidget {
+  const MainScaffold({super.key});
+
+  @override
+  State<MainScaffold> createState() => _MainScaffoldState();
+}
+
+class _MainScaffoldState extends State<MainScaffold> {
+  int _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    const pages = [HomeScreen(), HabitsScreen(), StatsScreen(), ProfileScreen()];
+
+    return Scaffold(
+      body: IndexedStack(index: _selectedIndex, children: pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.today), label: 'Today'),
+          NavigationDestination(icon: Icon(Icons.list_alt), label: 'Habits'),
+          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Stats'),
+          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+      ),
+    );
   }
 }

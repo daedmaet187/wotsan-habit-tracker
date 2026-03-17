@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/habit.dart';
 import '../services/api_service.dart';
-import '../services/auth_service.dart';
+import '../utils/habit_metrics.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,15 +14,16 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final _apiService = ApiService();
-  final _authService = AuthService();
 
   bool _isLoading = true;
   List<Habit> _habits = [];
   Set<String> _loggedToday = <String>{};
   Map<String, String> _logIdsByHabit = <String, String>{};
+  Map<String, int> _streaks = <String, int>{};
+  String _filter = 'all';
 
   String get _today => DateFormat('yyyy-MM-dd').format(DateTime.now());
-  String get _todayPretty => DateFormat('EEE, MMM d').format(DateTime.now());
+  String get _todayPretty => DateFormat('EEEE, MMMM d').format(DateTime.now());
 
   @override
   void initState() {
@@ -35,10 +36,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       final habitsRes = await _apiService.getHabits();
-      final logsRes = await _apiService.getLogsByDate(_today);
-
+      final recentLogs = await _apiService.getRecentLogs(30);
       final logsByHabit = <String, String>{};
-      for (final item in logsRes) {
+      for (final item in (recentLogs[_today] ?? <dynamic>[])) {
         final log = Map<String, dynamic>.from(item as Map);
         final habitId = log['habit_id']?.toString();
         final logId = log['id']?.toString();
@@ -47,13 +47,18 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
+      final habits = habitsRes
+          .map((e) => Habit.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where((h) => h.isActive)
+          .toList();
+      final logsByDateByHabit = HabitMetrics.logsByDateByHabit(recentLogs);
+      final streaks = HabitMetrics.streaksForHabits(habits, logsByDateByHabit, 30);
+
       setState(() {
-        _habits = habitsRes
-            .map((e) => Habit.fromJson(Map<String, dynamic>.from(e as Map)))
-            .where((h) => h.isActive)
-            .toList();
+        _habits = habits;
         _loggedToday = logsByHabit.keys.toSet();
         _logIdsByHabit = logsByHabit;
+        _streaks = streaks;
       });
     } catch (_) {
       if (!mounted) return;
@@ -71,15 +76,9 @@ class _HomeScreenState extends State<HomeScreen> {
         final logId = _logIdsByHabit[habit.id];
         if (logId == null) return;
         await _apiService.deleteLog(logId);
-        if (!mounted) return;
-        setState(() {
-          _loggedToday.remove(habit.id);
-          _logIdsByHabit.remove(habit.id);
-        });
-        return;
+      } else {
+        await _apiService.logHabit(habit.id, _today);
       }
-
-      await _apiService.logHabit(habit.id, _today);
       await _loadData();
     } catch (_) {
       if (!mounted) return;
@@ -89,174 +88,252 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _quickAddHabit() async {
-    final nameController = TextEditingController();
-    String frequency = 'daily';
-
-    final created = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Quick Add Habit', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'Habit name'),
-                  ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<String>(
-                    segments: const [
-                      ButtonSegment(value: 'daily', label: Text('Daily')),
-                      ButtonSegment(value: 'weekly', label: Text('Weekly')),
-                    ],
-                    selected: {frequency},
-                    onSelectionChanged: (selection) {
-                      setModalState(() => frequency = selection.first);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () {
-                      if (nameController.text.trim().isEmpty) {
-                        return;
-                      }
-                      Navigator.pop(context, true);
-                    },
-                    child: const Text('Save'),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    if (created != true || nameController.text.trim().isEmpty) return;
-
-    try {
-      await _apiService.createHabit({
-        'name': nameController.text.trim(),
-        'frequency': frequency,
-        'target_days': frequency == 'weekly' ? 3 : 1,
-      });
-      await _loadData();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create habit.')),
-      );
-    }
-  }
-
-  Future<void> _logout() async {
-    await _authService.logout();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/login');
-  }
-
   Color _parseColor(String hex, Color fallback) {
     final normalized = hex.replaceAll('#', '');
     final buffer = StringBuffer();
-    if (normalized.length == 6) {
-      buffer.write('ff');
-    }
+    if (normalized.length == 6) buffer.write('ff');
     buffer.write(normalized);
     return Color(int.tryParse(buffer.toString(), radix: 16) ?? fallback.value);
   }
 
+  List<Habit> get _filteredHabits {
+    if (_filter == 'all') return _habits;
+    return _habits.where((h) => h.frequency == _filter).toList();
+  }
+
+  void _showActions(Habit habit) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(content: Text('Edit from Habits tab.')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline),
+                title: const Text('Delete'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(content: Text('Delete from Habits tab.')),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('View History'),
+                onTap: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(this.context).showSnackBar(
+                    const SnackBar(content: Text('History view coming soon.')),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final visibleHabits = _filteredHabits;
+    final pending = visibleHabits.where((h) => !_loggedToday.contains(h.id)).toList();
+    final completed = visibleHabits.where((h) => _loggedToday.contains(h.id)).toList();
+    final doneCount = visibleHabits.where((h) => _loggedToday.contains(h.id)).length;
+    final progress = visibleHabits.isEmpty ? 0.0 : doneCount / visibleHabits.length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Today'),
-            Text(
-              _todayPretty,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
-        ],
-      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
-              child: _habits.isEmpty
-                  ? ListView(
-                      children: const [
-                        SizedBox(height: 180),
-                        Center(child: Text('No habits yet. Tap + to create your first one.')),
-                      ],
-                    )
-                  : ListView.separated(
+              child: CustomScrollView(
+                slivers: [
+                  SliverAppBar.large(
+                    pinned: true,
+                    title: const Text('Today'),
+                    bottom: PreferredSize(
+                      preferredSize: const Size.fromHeight(52),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(_todayPretty, style: theme.textTheme.bodyMedium),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
                       padding: const EdgeInsets.all(16),
-                      itemCount: _habits.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (context, index) {
-                        final habit = _habits[index];
-                        final checked = _loggedToday.contains(habit.id);
-                        final dotColor = _parseColor(habit.color, colorScheme.primary);
-
-                        return Card(
-                          child: ListTile(
-                            onTap: () => _toggleHabit(habit, !checked),
-                            leading: CircleAvatar(
-                              radius: 8,
-                              backgroundColor: dotColor,
-                            ),
-                            title: Text(habit.name),
-                            subtitle: Wrap(
-                              spacing: 8,
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              children: [
-                                Text(habit.frequency),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: colorScheme.secondaryContainer,
-                                    borderRadius: BorderRadius.circular(999),
+                      child: Column(
+                        children: [
+                          Card(
+                            elevation: 0,
+                            color: colorScheme.surfaceVariant,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '$doneCount / ${visibleHabits.length} habits done today',
+                                    style: theme.textTheme.titleMedium,
                                   ),
-                                  child: Text(
-                                    habit.frequency,
-                                    style: Theme.of(context).textTheme.labelSmall,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            trailing: Checkbox(
-                              value: checked,
-                              onChanged: (value) => _toggleHabit(habit, value ?? false),
+                                  const SizedBox(height: 12),
+                                  LinearProgressIndicator(value: progress),
+                                ],
+                              ),
                             ),
                           ),
-                        );
-                      },
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              ('all', 'All'),
+                              ('daily', 'Daily'),
+                              ('weekly', 'Weekly'),
+                              ('monthly', 'Monthly'),
+                            ]
+                                .map(
+                                  (item) => FilterChip(
+                                    label: Text(item.$2),
+                                    selected: _filter == item.$1,
+                                    onSelected: (_) => setState(() => _filter = item.$1),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                        ],
+                      ),
                     ),
+                  ),
+                  if (visibleHabits.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.checklist_rounded, size: 54, color: colorScheme.outline),
+                            const SizedBox(height: 10),
+                            const Text('No habits found for this filter.'),
+                          ],
+                        ),
+                      ),
+                    )
+                  else ...[
+                    SliverList.builder(
+                      itemCount: pending.length,
+                      itemBuilder: (context, index) => _HabitTile(
+                        habit: pending[index],
+                        checked: false,
+                        streak: _streaks[pending[index].id] ?? 0,
+                        onToggle: (value) => _toggleHabit(pending[index], value),
+                        onLongPress: () => _showActions(pending[index]),
+                        dotColor: _parseColor(pending[index].color, colorScheme.primary),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Text(
+                          'Completed (${completed.length})',
+                          style: theme.textTheme.titleMedium?.copyWith(color: colorScheme.outline),
+                        ),
+                      ),
+                    ),
+                    SliverList.builder(
+                      itemCount: completed.length,
+                      itemBuilder: (context, index) => Opacity(
+                        opacity: 0.7,
+                        child: _HabitTile(
+                          habit: completed[index],
+                          checked: true,
+                          streak: _streaks[completed[index].id] ?? 0,
+                          onToggle: (value) => _toggleHabit(completed[index], value),
+                          onLongPress: () => _showActions(completed[index]),
+                          dotColor: _parseColor(completed[index].color, colorScheme.primary),
+                        ),
+                      ),
+                    ),
+                    const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                  ],
+                ],
+              ),
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _quickAddHabit,
-        icon: const Icon(Icons.add),
-        label: const Text('Quick Add'),
+    );
+  }
+}
+
+class _HabitTile extends StatelessWidget {
+  const _HabitTile({
+    required this.habit,
+    required this.checked,
+    required this.streak,
+    required this.onToggle,
+    required this.onLongPress,
+    required this.dotColor,
+  });
+
+  final Habit habit;
+  final bool checked;
+  final int streak;
+  final ValueChanged<bool> onToggle;
+  final VoidCallback onLongPress;
+  final Color dotColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Card(
+        elevation: 0,
+        color: colorScheme.surfaceVariant,
+        child: ListTile(
+          onTap: () => onToggle(!checked),
+          onLongPress: onLongPress,
+          leading: Icon(Icons.circle, color: dotColor, size: 24),
+          title: Text(habit.name, style: theme.textTheme.titleMedium),
+          subtitle: Wrap(
+            spacing: 8,
+            children: [
+              Chip(label: Text(habit.frequency.toUpperCase())),
+              Chip(label: Text('🔥 $streak day streak')),
+            ],
+          ),
+          trailing: GestureDetector(
+            onTap: () => onToggle(!checked),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: checked ? dotColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: checked ? dotColor : colorScheme.outline),
+              ),
+              child: checked ? Icon(Icons.check, color: colorScheme.onPrimary) : null,
+            ),
+          ),
+        ),
       ),
     );
   }
