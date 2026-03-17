@@ -1,10 +1,21 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip as RechartsTooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import api from '@/lib/api';
 
 const toArray = (payload) => {
@@ -12,17 +23,6 @@ const toArray = (payload) => {
   if (Array.isArray(payload?.items)) return payload.items;
   if (Array.isArray(payload?.data)) return payload.data;
   return [];
-};
-
-const widthClass = (value, max) => {
-  const ratio = max ? value / max : 0;
-  if (ratio >= 0.9) return 'w-full';
-  if (ratio >= 0.8) return 'w-5/6';
-  if (ratio >= 0.65) return 'w-4/5';
-  if (ratio >= 0.5) return 'w-2/3';
-  if (ratio >= 0.35) return 'w-1/2';
-  if (ratio > 0) return 'w-1/3';
-  return 'w-0';
 };
 
 export default function Dashboard() {
@@ -77,7 +77,7 @@ export default function Dashboard() {
               <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{loading ? '—' : kpi.value}</p>
+              {loading ? <Skeleton className="h-10 w-24" /> : <p className="text-3xl font-bold">{kpi.value}</p>}
             </CardContent>
           </Card>
         ))}
@@ -92,39 +92,47 @@ export default function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Habit</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activity.length === 0 ? (
+            {loading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-9 w-full" />
+                ))}
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
-                      No recent activity
-                    </TableCell>
+                    <TableHead>Habit</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Date</TableHead>
                   </TableRow>
-                ) : (
-                  activity.map((item) => (
-                    <TableRow key={item.id || `${item.user_email}-${item.created_at}`}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full bg-primary/80" />
-                          <span className="font-medium">{item.habit_name || 'Habit'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{item.user_email || '—'}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {item.logged_date ? new Date(item.logged_date).toLocaleDateString() : '—'}
+                </TableHeader>
+                <TableBody>
+                  {activity.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground">
+                        No recent activity
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    activity.map((item) => (
+                      <TableRow key={item.id || `${item.user_email}-${item.created_at}`}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 rounded-full bg-primary/80" />
+                            <span className="font-medium">{item.habit_name || 'Habit'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{item.user_email || '—'}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {item.logged_date ? new Date(item.logged_date).toLocaleDateString() : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
 
@@ -133,20 +141,21 @@ export default function Dashboard() {
             <CardTitle>Top Habits</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {topHabits.length === 0 ? (
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)
+            ) : topHabits.length === 0 ? (
               <p className="text-sm text-muted-foreground">No habit data yet.</p>
             ) : (
               topHabits.map((habit, index) => {
                 const maxCount = Math.max(...topHabits.map((h) => h.log_count || 0), 1);
+                const value = Math.round(((habit.log_count || 0) / maxCount) * 100);
                 return (
                   <div key={habit.id || `${habit.name}-${index}`} className="space-y-1">
                     <div className="flex items-center justify-between text-sm">
                       <p className="font-medium">#{index + 1} {habit.name || 'Untitled'}</p>
                       <Badge variant="secondary">{habit.log_count || 0} logs</Badge>
                     </div>
-                    <div className="h-2 rounded bg-muted">
-                      <div className={`h-full rounded bg-primary ${widthClass(habit.log_count || 0, maxCount)}`} />
-                    </div>
+                    <Progress value={value} />
                   </div>
                 );
               })
@@ -156,11 +165,19 @@ export default function Dashboard() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>User Growth (7 days)</CardTitle>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="cursor-help text-xs text-muted-foreground">Data point labels</span>
+            </TooltipTrigger>
+            <TooltipContent>Hover chart points to inspect exact values by date.</TooltipContent>
+          </Tooltip>
         </CardHeader>
         <CardContent>
-          {growth.length === 0 ? (
+          {loading ? (
+            <Skeleton className="h-56 w-full" />
+          ) : growth.length === 0 ? (
             <p className="text-sm text-muted-foreground">No growth data available.</p>
           ) : (
             <div className="h-56">
@@ -173,7 +190,7 @@ export default function Dashboard() {
                     className="text-xs"
                   />
                   <YAxis className="text-xs" allowDecimals={false} />
-                  <Tooltip
+                  <RechartsTooltip
                     formatter={(value) => [value, 'New Users']}
                     labelFormatter={(v) => new Date(v).toLocaleDateString()}
                   />

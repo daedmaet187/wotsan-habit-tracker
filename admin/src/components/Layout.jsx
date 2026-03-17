@@ -1,6 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Activity, BarChart2, LayoutDashboard, ListChecks, LogOut, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Activity, BarChart2, LayoutDashboard, ListChecks, LogOut, User, Users } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -22,17 +29,17 @@ export default function Layout({ children }) {
 
   return (
     <div className="flex h-screen bg-background">
-      <aside className="w-64 border-r flex flex-col">
-        <div className="p-6 border-b">
+      <aside className="flex w-64 flex-col border-r">
+        <div className="border-b p-6">
           <h1 className="text-xl font-bold">Habit Tracker</h1>
           <p className="text-sm text-muted-foreground">Admin Dashboard</p>
         </div>
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 space-y-1 p-4">
           {navItems.map(({ to, label, icon: Icon }) => (
             <Link key={to} to={to}>
               <div
                 className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
                   location.pathname === to
                     ? 'bg-primary text-primary-foreground'
                     : 'hover:bg-accent hover:text-accent-foreground'
@@ -44,11 +51,31 @@ export default function Layout({ children }) {
             </Link>
           ))}
         </nav>
-        <div className="p-4 border-t">
-          <Button variant="ghost" className="w-full justify-start gap-3" onClick={handleLogout}>
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+        <div className="border-t p-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-accent">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback>A</AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">Admin</p>
+                  <p className="text-xs text-muted-foreground">admin@habittracker</p>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Dashboard
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 

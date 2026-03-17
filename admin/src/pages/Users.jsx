@@ -5,6 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatRelativeTime } from '@/lib/utils';
 import api from '@/lib/api';
 
@@ -29,6 +43,7 @@ const getFilteredUsers = (users, search, filter) => {
 export default function Users() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const queryClient = useQueryClient();
 
   const { data: users = [], isLoading, isError } = useQuery({
@@ -53,7 +68,10 @@ export default function Users() {
 
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/api/admin/users/${id}`),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setDeleteTarget(null);
+      invalidate();
+    },
   });
 
   const filtered = useMemo(() => getFilteredUsers(users, search, filter), [users, search, filter]);
@@ -77,22 +95,32 @@ export default function Users() {
             />
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            {filterOptions.map((option) => (
-              <Button
-                key={option}
-                size="sm"
-                variant={filter === option ? 'default' : 'outline'}
-                onClick={() => setFilter(option)}
-              >
-                {option}
-              </Button>
-            ))}
-          </div>
+          <Tabs value={filter} onValueChange={setFilter}>
+            <TabsList>
+              {filterOptions.map((option) => (
+                <TabsTrigger key={option} value={option}>
+                  {option}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </CardHeader>
 
         <CardContent>
-          {isLoading ? <p className="text-sm text-muted-foreground">Loading users...</p> : null}
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, idx) => (
+                <div key={idx} className="grid grid-cols-7 gap-3">
+                  <Skeleton className="h-10 col-span-2" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                </div>
+              ))}
+            </div>
+          ) : null}
           {isError ? <p className="text-sm text-destructive">Failed to load users.</p> : null}
 
           {!isLoading && !isError ? (
@@ -117,7 +145,7 @@ export default function Users() {
                   </TableRow>
                 ) : (
                   filtered.map((user) => {
-                    const initial = (user.email || '?').charAt(0).toUpperCase();
+                    const initial = (user.full_name || user.email || '?').charAt(0).toUpperCase();
                     const nextRole = user.role === 'admin' ? 'user' : 'admin';
                     const nextStatus = user.is_active === false;
 
@@ -125,9 +153,9 @@ export default function Users() {
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-                              {initial}
-                            </span>
+                            <Avatar className="h-9 w-9">
+                              <AvatarFallback>{initial}</AvatarFallback>
+                            </Avatar>
                             <div>
                               <p className="font-medium">{user.email}</p>
                               <p className="text-xs text-muted-foreground">{user.full_name || 'No full name'}</p>
@@ -152,33 +180,45 @@ export default function Users() {
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={roleMutation.isPending}
-                              onClick={() => roleMutation.mutate({ id: user.id, role: nextRole })}
-                            >
-                              Make {nextRole}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={statusMutation.isPending}
-                              onClick={() => statusMutation.mutate({ id: user.id, is_active: nextStatus })}
-                            >
-                              {user.is_active === false ? 'Activate' : 'Deactivate'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              disabled={deleteMutation.isPending}
-                              onClick={() => {
-                                const ok = window.confirm('This will delete all their habits and logs. Are you sure?');
-                                if (ok) deleteMutation.mutate(user.id);
-                              }}
-                            >
-                              Delete
-                            </Button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={roleMutation.isPending}
+                                  onClick={() => roleMutation.mutate({ id: user.id, role: nextRole })}
+                                >
+                                  Make {nextRole}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Toggle user role</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={statusMutation.isPending}
+                                  onClick={() => statusMutation.mutate({ id: user.id, is_active: nextStatus })}
+                                >
+                                  {user.is_active === false ? 'Activate' : 'Deactivate'}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Toggle account status</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={deleteMutation.isPending}
+                                  onClick={() => setDeleteTarget(user)}
+                                >
+                                  Delete
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Delete user and all data</TooltipContent>
+                            </Tooltip>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -190,6 +230,26 @@ export default function Users() {
           ) : null}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this user?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {deleteTarget?.email || 'this user'} and all related habits/logs.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+            >
+              Delete user
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

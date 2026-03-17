@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Area,
@@ -15,6 +15,10 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import api from '@/lib/api';
 
 const toArray = (payload) => {
@@ -25,25 +29,17 @@ const toArray = (payload) => {
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const widthClass = (value, max) => {
-  const ratio = max ? value / max : 0;
-  if (ratio >= 0.9) return 'w-full';
-  if (ratio >= 0.8) return 'w-5/6';
-  if (ratio >= 0.65) return 'w-4/5';
-  if (ratio >= 0.5) return 'w-2/3';
-  if (ratio >= 0.35) return 'w-1/2';
-  if (ratio > 0) return 'w-1/3';
-  return 'w-0';
-};
-
 export default function Analytics() {
+  const [range, setRange] = useState('30');
+
   const { data, isLoading, isError } = useQuery({
     queryKey: ['admin-analytics'],
     queryFn: () => api.get('/api/admin/analytics').then((r) => r.data),
   });
 
-  const userGrowth = toArray(data?.user_growth).slice(-30);
-  const completionRaw = toArray(data?.completion_trend).slice(-30);
+  const daysRange = Number(range);
+  const userGrowth = toArray(data?.user_growth).slice(-daysRange);
+  const completionRaw = toArray(data?.completion_trend).slice(-daysRange);
   const topHabits = toArray(data?.top_habits).slice(0, 10);
 
   const completionTrend = useMemo(() => {
@@ -84,62 +80,89 @@ export default function Analytics() {
   const avgCompletion = completionTrend.length
     ? Math.round(completionTrend.reduce((sum, item) => sum + (item.completion_rate || 0), 0) / completionTrend.length)
     : 0;
-  const maxTopHabit = Math.max(...topHabits.map((habit) => habit.log_count || 0), 0);
+  const maxTopHabit = Math.max(...topHabits.map((habit) => habit.log_count || 0), 1);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
-        <p className="text-muted-foreground">Performance trends for growth, completion, and engagement.</p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
+          <p className="text-muted-foreground">Performance trends for growth, completion, and engagement.</p>
+        </div>
+        <div className="w-48">
+          <Select value={range} onValueChange={setRange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Range" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="14">Last 14 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      {isLoading ? <p className="text-sm text-muted-foreground">Loading analytics...</p> : null}
       {isError ? <p className="text-sm text-destructive">Failed to load analytics.</p> : null}
 
-      {!isLoading && !isError ? (
+      {isLoading ? (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-40" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-72 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
         <div className="grid gap-4 xl:grid-cols-2">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>User Growth (30 days)</CardTitle>
-              <Badge variant="secondary">{totalNewUsers} new users</Badge>
+            <CardHeader className="space-y-3">
+              <CardTitle>Growth & Completion</CardTitle>
+              <Tabs defaultValue="growth">
+                <TabsList>
+                  <TabsTrigger value="growth">Growth</TabsTrigger>
+                  <TabsTrigger value="completion">Completion</TabsTrigger>
+                </TabsList>
+                <TabsContent value="growth" className="h-64">
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span>New users</span>
+                    <Badge variant="secondary">{totalNewUsers}</Badge>
+                  </div>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={userGrowth}>
+                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                      <XAxis dataKey="date" tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} className="text-xs" />
+                      <YAxis allowDecimals={false} className="text-xs" />
+                      <Tooltip labelFormatter={(v) => new Date(v).toLocaleDateString()} />
+                      <Area type="monotone" dataKey="new_users" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </TabsContent>
+                <TabsContent value="completion" className="space-y-2">
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span>Average completion</span>
+                    <Badge variant="secondary">{avgCompletion}%</Badge>
+                  </div>
+                  <Progress value={avgCompletion} />
+                  <div className="h-56">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={completionTrend}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <XAxis dataKey="date" tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} className="text-xs" />
+                        <YAxis domain={[0, 100]} className="text-xs" />
+                        <Tooltip formatter={(v) => [`${v}%`, 'Completion']} labelFormatter={(v) => new Date(v).toLocaleDateString()} />
+                        <Line type="monotone" dataKey="completion_rate" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </CardHeader>
-            <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={userGrowth}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    className="text-xs"
-                  />
-                  <YAxis allowDecimals={false} className="text-xs" />
-                  <Tooltip labelFormatter={(v) => new Date(v).toLocaleDateString()} />
-                  <Area type="monotone" dataKey="new_users" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Completion Trend (30 days)</CardTitle>
-              <Badge variant="secondary">Avg {avgCompletion}%</Badge>
-            </CardHeader>
-            <CardContent className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={completionTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(v) => new Date(v).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    className="text-xs"
-                  />
-                  <YAxis domain={[0, 100]} className="text-xs" />
-                  <Tooltip formatter={(v) => [`${v}%`, 'Completion']} labelFormatter={(v) => new Date(v).toLocaleDateString()} />
-                  <Line type="monotone" dataKey="completion_rate" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
           </Card>
 
           <Card>
@@ -159,11 +182,11 @@ export default function Analytics() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle>Top 10 Habits</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="grid gap-4 md:grid-cols-2">
               {topHabits.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No habit ranking available.</p>
               ) : (
@@ -176,16 +199,14 @@ export default function Analytics() {
                       </div>
                       <Badge variant="secondary">{habit.log_count || 0}</Badge>
                     </div>
-                    <div className="h-2 rounded bg-muted">
-                      <div className={`h-full rounded bg-primary ${widthClass(habit.log_count || 0, maxTopHabit)}`} />
-                    </div>
+                    <Progress value={Math.round(((habit.log_count || 0) / maxTopHabit) * 100)} />
                   </div>
                 ))
               )}
             </CardContent>
           </Card>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

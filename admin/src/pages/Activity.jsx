@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatRelativeTime } from '@/lib/utils';
 import api from '@/lib/api';
@@ -87,7 +88,13 @@ export default function Activity() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? <p className="text-sm text-muted-foreground">Loading activity...</p> : null}
+          {isLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 8 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : null}
           {isError ? (
             <div className="space-y-2">
               <p className="text-sm text-destructive">Failed to load activity.</p>
