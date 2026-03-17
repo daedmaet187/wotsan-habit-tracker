@@ -1,25 +1,39 @@
 class User {
   final String id;
   final String email;
-  final String? fullName;
+  final String fullName;
   final String role;
-  final DateTime? createdAt;
+  final bool isActive;
+  final DateTime createdAt;
 
-  User({
+  const User({
     required this.id,
     required this.email,
-    this.fullName,
+    required this.fullName,
     required this.role,
-    this.createdAt,
+    required this.isActive,
+    required this.createdAt,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
-      id: json['id'] as String,
-      email: json['email'] as String,
-      fullName: json['full_name'] as String?,
-      role: (json['role'] as String?) ?? 'user',
-      createdAt: json['created_at'] != null ? DateTime.parse(json['created_at']) : null,
+      id: (json['id'] ?? '').toString(),
+      email: (json['email'] ?? '').toString(),
+      fullName: (json['full_name'] ?? '').toString(),
+      role: (json['role'] ?? 'user').toString(),
+      isActive: json['is_active'] as bool? ?? true,
+      createdAt: DateTime.tryParse((json['created_at'] ?? '').toString()) ?? DateTime.now(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'full_name': fullName,
+      'role': role,
+      'is_active': isActive,
+      'created_at': createdAt.toIso8601String(),
+    };
   }
 }

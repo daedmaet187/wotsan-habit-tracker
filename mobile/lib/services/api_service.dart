@@ -29,6 +29,14 @@ class ApiService {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  Future<Map<String, dynamic>> register(String email, String password, String fullName) async {
+    final res = await _dio.post(
+      '/api/auth/register',
+      data: {'email': email, 'password': password, 'full_name': fullName},
+    );
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
   Future<List<dynamic>> getHabits() async {
     final res = await _dio.get('/api/habits');
     return List<dynamic>.from(res.data as List);

@@ -20,6 +20,16 @@ class AuthService {
     await prefs.setString(_tokenKey, token);
   }
 
+  Future<void> register(String email, String password, String fullName) async {
+    final response = await _apiService.register(email, password, fullName);
+    final token = response['token'] as String?;
+    if (token == null || token.isEmpty) {
+      throw Exception('Registration failed');
+    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);

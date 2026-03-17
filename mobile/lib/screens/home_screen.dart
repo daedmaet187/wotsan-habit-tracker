@@ -20,13 +20,14 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Habit> _habits = [];
   Set<String> _loggedToday = <String>{};
 
+  String get _today => DateFormat('yyyy-MM-dd').format(DateTime.now());
+  String get _todayPretty => DateFormat('EEE, MMM d').format(DateTime.now());
+
   @override
   void initState() {
     super.initState();
     _loadData();
   }
-
-  String get _today => DateFormat('yyyy-MM-dd').format(DateTime.now());
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
@@ -36,15 +37,18 @@ class _HomeScreenState extends State<HomeScreen> {
       final logsRes = await _apiService.getLogsByDate(_today);
 
       setState(() {
-        _habits = habitsRes.map((e) => Habit.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+        _habits = habitsRes
+            .map((e) => Habit.fromJson(Map<String, dynamic>.from(e as Map)))
+            .where((h) => h.isActive)
+            .toList();
         _loggedToday = logsRes
-            .map((e) => Map<String, dynamic>.from(e as Map)['habit_id'] as String)
+            .map((e) => Map<String, dynamic>.from(e as Map)['habit_id'].toString())
             .toSet();
       });
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to load habits.')),
+        const SnackBar(content: Text('Failed to load today\'s habits.')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -59,11 +63,85 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await _apiService.logHabit(habit.id, _today);
+      if (!mounted) return;
       setState(() => _loggedToday.add(habit.id));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update habit log.')),
+      );
+    }
+  }
+
+  Future<void> _quickAddHabit() async {
+    final nameController = TextEditingController();
+    String frequency = 'daily';
+
+    final created = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Quick Add Habit', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Habit name'),
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: 'daily', label: Text('Daily')),
+                      ButtonSegment(value: 'weekly', label: Text('Weekly')),
+                    ],
+                    selected: {frequency},
+                    onSelectionChanged: (selection) {
+                      setModalState(() => frequency = selection.first);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () {
+                      if (nameController.text.trim().isEmpty) {
+                        return;
+                      }
+                      Navigator.pop(context, true);
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (created != true || nameController.text.trim().isEmpty) return;
+
+    try {
+      await _apiService.createHabit({
+        'name': nameController.text.trim(),
+        'frequency': frequency,
+        'target_days': frequency == 'weekly' ? 3 : 1,
+      });
+      await _loadData();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to create habit.')),
       );
     }
   }
@@ -74,11 +152,32 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushReplacementNamed(context, '/login');
   }
 
+  Color _parseColor(String hex, Color fallback) {
+    final normalized = hex.replaceAll('#', '');
+    final buffer = StringBuffer();
+    if (normalized.length == 6) {
+      buffer.write('ff');
+    }
+    buffer.write(normalized);
+    return Color(int.tryParse(buffer.toString(), radix: 16) ?? fallback.value);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Today's Habits"),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Today'),
+            Text(
+              _todayPretty,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
         actions: [
           IconButton(onPressed: _logout, icon: const Icon(Icons.logout)),
         ],
@@ -88,10 +187,10 @@ class _HomeScreenState extends State<HomeScreen> {
           : RefreshIndicator(
               onRefresh: _loadData,
               child: _habits.isEmpty
-                  ? const ListView(
-                      children: [
+                  ? ListView(
+                      children: const [
                         SizedBox(height: 180),
-                        Center(child: Text('No habits yet. Add your first one.')),
+                        Center(child: Text('No habits yet. Tap + to create your first one.')),
                       ],
                     )
                   : ListView.separated(
@@ -101,22 +200,47 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final habit = _habits[index];
                         final checked = _loggedToday.contains(habit.id);
+                        final dotColor = _parseColor(habit.color, colorScheme.primary);
+
                         return Card(
-                          child: CheckboxListTile(
-                            value: checked,
-                            onChanged: (value) => _toggleHabit(habit, value ?? false),
+                          child: ListTile(
+                            onTap: () => _toggleHabit(habit, !checked),
+                            leading: CircleAvatar(
+                              radius: 8,
+                              backgroundColor: dotColor,
+                            ),
                             title: Text(habit.name),
-                            subtitle: Text(habit.frequency),
-                            controlAffinity: ListTileControlAffinity.trailing,
+                            subtitle: Wrap(
+                              spacing: 8,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Text(habit.frequency),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.secondaryContainer,
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    habit.frequency,
+                                    style: Theme.of(context).textTheme.labelSmall,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            trailing: Checkbox(
+                              value: checked,
+                              onChanged: (value) => _toggleHabit(habit, value ?? false),
+                            ),
                           ),
                         );
                       },
                     ),
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.pushNamed(context, '/habits').then((_) => _loadData()),
+        onPressed: _quickAddHabit,
         icon: const Icon(Icons.add),
-        label: const Text('Add Habit'),
+        label: const Text('Quick Add'),
       ),
     );
   }

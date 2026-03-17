@@ -16,7 +16,7 @@ dependencies:
   flutter_riverpod: ^2.5.1 # For state management
   go_router: ^13.2.0 # For navigation
   intl: ^0.19.0 # For date formatting
-  recharts: ^2.12.7 # For admin dashboard activity charts (if shared/needed)
+  flutter_slidable: ^3.1.0
 
 dev_dependencies:
   flutter_test:

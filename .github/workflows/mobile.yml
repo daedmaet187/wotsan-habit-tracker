@@ -1,0 +1,35 @@
+name: Mobile CI
+on:
+  push:
+    branches: [main]
+    paths: [mobile/**]
+  pull_request:
+    paths: [mobile/**]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+          channel: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: mobile
+      - name: Analyze
+        run: flutter analyze
+        working-directory: mobile
+      - name: Test
+        run: flutter test
+        working-directory: mobile
+      - name: Build APK
+        run: flutter build apk --release --dart-define=API_URL=https://habit-api.stuff187.com
+        working-directory: mobile
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: mobile/build/app/outputs/flutter-apk/app-release.apk
