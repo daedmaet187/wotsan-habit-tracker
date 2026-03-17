@@ -7,7 +7,10 @@ require('dotenv').config();
 const app = express();
 
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: ['https://habit-admin.stuff187.com', 'http://localhost:5173'],
+  credentials: true,
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 
