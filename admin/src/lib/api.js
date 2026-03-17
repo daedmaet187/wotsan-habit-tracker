@@ -25,7 +25,7 @@ async function retryRequest(error, apiInstance, currentAttempt = 1, maxAttempts 
 }
 
 const api = axios.create({
-  baseURL: "",
+  baseURL: import.meta.env.VITE_API_URL || "",
   headers: {
     "Content-Type": "application/json",
   },
