@@ -243,7 +243,8 @@ class _HabitsScreenState extends State<HabitsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: _isLoading
+      body: SafeArea(
+        child: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadHabits,

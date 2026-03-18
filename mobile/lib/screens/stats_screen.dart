@@ -58,12 +58,13 @@ class _StatsScreenState extends State<StatsScreen> {
     final top3 = _streaks.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
 
     return Scaffold(
-      body: _loading
+      body: SafeArea(
+        child: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                 children: [
                   Text('Stats', style: theme.textTheme.headlineSmall),
                   const SizedBox(height: 12),
@@ -121,6 +122,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 ],
               ),
             ),
+        ),
     );
   }
 }

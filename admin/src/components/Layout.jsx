@@ -4,19 +4,16 @@ import {
   BarChart2,
   ChevronRight,
   ChevronsUpDown,
-  CircleHelp,
   LayoutDashboard,
   ListChecks,
   LogOut,
   Moon,
   PanelLeft,
-  Plus,
   Settings,
   Sun,
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
-import { useTheme } from '@/components/ThemeProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,9 +24,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import { useTheme } from '@/components/ThemeProvider';
 import { cn } from '@/lib/utils';
 
-const navMain = [
+const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/users', label: 'Users', icon: Users },
   { to: '/habits', label: 'Habits', icon: ListChecks },
@@ -69,8 +67,7 @@ export default function Layout({ children }) {
     navigate('/login');
   };
 
-  // Breadcrumb label from current path
-  const crumb = navMain.find((n) => n.to === location.pathname)?.label ?? 'Dashboard';
+  const crumb = navItems.find((n) => n.to === location.pathname)?.label ?? 'Dashboard';
 
   return (
     <div className="flex h-screen bg-background">
@@ -82,46 +79,27 @@ export default function Layout({ children }) {
         )}
       >
         {/* Brand */}
-        <div className={cn('flex items-center gap-2 border-b px-4 py-4', collapsed && 'justify-center px-2')}>
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
+        <div className={cn('flex items-center gap-2 border-b px-4 py-[14px]', collapsed && 'justify-center px-2')}>
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold select-none">
             H
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">Habit Tracker</p>
-              <p className="truncate text-xs text-muted-foreground">Admin</p>
+              <p className="truncate text-sm font-semibold leading-tight">Habit Tracker</p>
+              <p className="truncate text-xs text-muted-foreground leading-tight">Admin</p>
             </div>
           )}
         </div>
 
-        {/* Quick Create */}
-        {!collapsed && (
-          <div className="px-3 py-3">
-            <Button size="sm" className="w-full justify-start gap-2">
-              <Plus className="h-4 w-4" />
-              Quick Create
-            </Button>
-          </div>
-        )}
-        {collapsed && (
-          <div className="flex justify-center py-3">
-            <Button size="icon" variant="outline" className="h-8 w-8">
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        <Separator />
-
         {/* Main nav */}
         <nav className="flex-1 space-y-0.5 p-2 pt-3">
-          {navMain.map((item) => (
+          {navItems.map((item) => (
             <NavItem key={item.to} {...item} collapsed={collapsed} />
           ))}
         </nav>
 
-        {/* Bottom pinned */}
-        <div className="space-y-0.5 border-t p-2">
+        {/* Settings pinned */}
+        <div className="border-t p-2 space-y-0.5">
           <Link to="/settings">
             <div
               className={cn(
@@ -133,15 +111,6 @@ export default function Layout({ children }) {
               {!collapsed && <span>Settings</span>}
             </div>
           </Link>
-          <div
-            className={cn(
-              'flex cursor-default items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-              collapsed && 'justify-center px-2'
-            )}
-          >
-            <CircleHelp className="h-4 w-4 shrink-0" />
-            {!collapsed && <span>Get Help</span>}
-          </div>
         </div>
 
         {/* User */}
@@ -150,18 +119,18 @@ export default function Layout({ children }) {
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  'flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-accent',
+                  'flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-accent transition-colors',
                   collapsed && 'justify-center'
                 )}
               >
                 <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback className="text-xs">A</AvatarFallback>
+                  <AvatarFallback className="text-xs bg-primary text-primary-foreground">A</AvatarFallback>
                 </Avatar>
                 {!collapsed && (
                   <>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">Admin</p>
-                      <p className="truncate text-xs text-muted-foreground">admin@habittracker</p>
+                      <p className="truncate text-sm font-medium leading-tight">Admin</p>
+                      <p className="truncate text-xs text-muted-foreground leading-tight">admin@habittracker</p>
                     </div>
                     <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
                   </>
@@ -174,7 +143,10 @@ export default function Layout({ children }) {
                 Dashboard
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="text-destructive focus:text-destructive"
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
               </DropdownMenuItem>
@@ -206,7 +178,7 @@ export default function Layout({ children }) {
             size="icon"
             className="h-7 w-7"
             onClick={toggleTheme}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Switch to light' : 'Switch to dark'}
           >
             {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </Button>

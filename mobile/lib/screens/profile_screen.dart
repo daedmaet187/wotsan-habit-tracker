@@ -111,7 +111,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final appVersion = const String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0+1');
 
     return Scaffold(
-      body: _loading
+      body: SafeArea(
+        child: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _load,
@@ -220,6 +221,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+        ),
     );
   }
 }
