@@ -52,6 +52,8 @@ router.get('/stats', async (req, res) => {
       logsTodayResult,
       logsThisWeekResult,
       logsPerDayResult,
+      newUsersThisWeekResult,
+      streakLeadersResult,
     ] = await Promise.all([
       pool.query('SELECT COUNT(*)::int AS total_users FROM users'),
       pool.query('SELECT COUNT(*)::int AS total_habits, COUNT(*) FILTER (WHERE is_active = true)::int AS active_habits FROM habits'),
@@ -64,6 +66,17 @@ router.get('/stats', async (req, res) => {
          GROUP BY day
          ORDER BY day`
       ),
+      pool.query("SELECT COUNT(*)::int AS new_users_this_week FROM users WHERE created_at >= DATE_TRUNC('week', CURRENT_DATE)"),
+      pool.query(`
+        SELECT COUNT(DISTINCT user_id)::int AS streak_leaders
+        FROM (
+          SELECT user_id, COUNT(*) AS consecutive
+          FROM habit_logs
+          WHERE logged_date >= CURRENT_DATE - INTERVAL '6 days'
+          GROUP BY user_id
+          HAVING COUNT(*) >= 5
+        ) AS active_streakers
+      `),
     ]);
 
     res.json({
@@ -73,6 +86,8 @@ router.get('/stats', async (req, res) => {
       logs_today: logsTodayResult.rows[0].logs_today,
       logs_this_week: logsThisWeekResult.rows[0].logs_this_week,
       logs_per_day: logsPerDayResult.rows,
+      new_users_this_week: newUsersThisWeekResult.rows[0].new_users_this_week,
+      streak_leaders: streakLeadersResult.rows[0].streak_leaders,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

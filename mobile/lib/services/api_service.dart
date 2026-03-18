@@ -38,6 +38,11 @@ class ApiService {
     return Map<String, dynamic>.from(res.data as Map);
   }
 
+  Future<Map<String, dynamic>> getMe() async {
+    final res = await _dio.get('/api/users/me');
+    return Map<String, dynamic>.from(res.data as Map);
+  }
+
   Future<List<dynamic>> getHabits() async {
     final res = await _dio.get('/api/habits');
     return List<dynamic>.from(res.data as List);
@@ -70,13 +75,23 @@ class ApiService {
     await _dio.delete('/api/logs/$logId');
   }
 
+  /// Fetches logs for a date range from the bulk endpoint.
+  /// Returns a map keyed by date string (yyyy-MM-dd) -> list of log objects.
   Future<Map<String, List<dynamic>>> getRecentLogs(int days) async {
     final today = DateTime.now();
-    final dates = List.generate(days, (i) {
-      final d = today.subtract(Duration(days: i));
-      return DateFormat('yyyy-MM-dd').format(d);
-    });
-    final results = await Future.wait(dates.map(getLogsByDate));
-    return Map.fromIterables(dates, results);
+    final formatter = DateFormat('yyyy-MM-dd');
+    final from = formatter.format(today.subtract(Duration(days: days - 1)));
+    final to = formatter.format(today);
+    final res = await _dio.get('/api/logs/range', queryParameters: {'from': from, 'to': to});
+    final rows = List<dynamic>.from(res.data as List);
+    final result = <String, List<dynamic>>{};
+    for (final item in rows) {
+      final row = Map<String, dynamic>.from(item as Map);
+      final date = row['logged_date']?.toString();
+      if (date != null) {
+        result.putIfAbsent(date, () => []).add(item);
+      }
+    }
+    return result;
   }
 }

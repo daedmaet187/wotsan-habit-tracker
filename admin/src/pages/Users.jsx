@@ -157,8 +157,8 @@ export default function Users() {
                               <AvatarFallback>{initial}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium">{user.email}</p>
-                              <p className="text-xs text-muted-foreground">{user.full_name || 'No full name'}</p>
+                              <p className="font-medium">{user.full_name || 'No name'}</p>
+                              <p className="text-xs text-muted-foreground">{user.email}</p>
                             </div>
                           </div>
                         </TableCell>
