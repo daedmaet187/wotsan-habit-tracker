@@ -14,7 +14,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # --- AWS Setup ---
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -26,7 +25,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # --- Build/Push ---
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -40,11 +38,43 @@ jobs:
           docker push $IMAGE
           echo "IMAGE_URI=$IMAGE" >> $GITHUB_ENV
 
-      # --- Deploy to ECS ---
-      - name: Deploy to Amazon ECS
+      - name: Register new ECS task definition and deploy
+        env:
+          ECR_REGISTRY: ${{ secrets.ECR_REGISTRY_URL }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
+          IMAGE=${ECR_REGISTRY}/wotsan-habit-tracker-api:${IMAGE_TAG}
+
+          # Fetch current task def, swap image, register new revision
+          TASK_DEF=$(aws ecs describe-task-definition \
+            --task-definition wotsan-habit-tracker-api \
+            --query 'taskDefinition' --output json)
+
+          NEW_TASK_DEF=$(echo $TASK_DEF | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          d['containerDefinitions'][0]['image'] = '${IMAGE}'
+          for k in ['taskDefinitionArn','revision','status','requiresAttributes',
+                    'placementConstraints','compatibilities','registeredAt','registeredBy']:
+              d.pop(k, None)
+          print(json.dumps(d))
+          ")
+
+          NEW_REVISION=$(aws ecs register-task-definition \
+            --cli-input-json "$NEW_TASK_DEF" \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+
+          echo "Deploying task def: $NEW_REVISION"
+
           aws ecs update-service \
             --cluster wotsan-habit-tracker-cluster \
             --service wotsan-habit-tracker-api \
-            --task-definition wotsan-habit-tracker-api \
+            --task-definition "$NEW_REVISION" \
             --force-new-deployment
+
+          # Wait for service to stabilize
+          aws ecs wait services-stable \
+            --cluster wotsan-habit-tracker-cluster \
+            --services wotsan-habit-tracker-api
+
+          echo "Deployment complete"
