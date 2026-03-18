@@ -34,4 +34,12 @@ const CardContent = React.forwardRef(({ className, ...props }, ref) => (
 ))
 CardContent.displayName = "CardContent"
 
-export { Card, CardHeader, CardTitle, CardContent }
+const CardDescription = React.forwardRef(({ className, ...props }, ref) => (
+  <p
+    className={cn("text-sm text-muted-foreground", className)}
+    {...props}
+  />
+))
+CardDescription.displayName = "CardDescription"
+
+export { Card, CardHeader, CardTitle, CardContent, CardDescription }
