@@ -8,12 +8,15 @@ import {
   LayoutDashboard,
   ListChecks,
   LogOut,
+  Moon,
   PanelLeft,
   Plus,
   Settings,
+  Sun,
   Users,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useTheme } from '@/components/ThemeProvider';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,6 +62,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const { theme, toggle: toggleTheme } = useTheme();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -192,11 +196,20 @@ export default function Layout({ children }) {
             <PanelLeft className="h-4 w-4" />
           </Button>
           <Separator orientation="vertical" className="h-4" />
-          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+          <nav className="flex flex-1 items-center gap-1 text-sm text-muted-foreground">
             <span>Admin</span>
             <ChevronRight className="h-3.5 w-3.5" />
             <span className="font-medium text-foreground">{crumb}</span>
           </nav>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
         </header>
 
         {/* Page content */}

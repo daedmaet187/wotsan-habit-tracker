@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/habits_screen.dart';
 import 'screens/home_screen.dart';
@@ -7,7 +8,19 @@ import 'screens/profile_screen.dart';
 import 'screens/stats_screen.dart';
 import 'services/auth_service.dart';
 
-void main() {
+// Global theme notifier so any screen can toggle it
+final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Restore saved theme preference
+  final prefs = await SharedPreferences.getInstance();
+  final saved = prefs.getString('theme_mode');
+  if (saved == 'dark') {
+    themeNotifier.value = ThemeMode.dark;
+  } else if (saved == 'light') {
+    themeNotifier.value = ThemeMode.light;
+  }
   runApp(const HabitTrackerApp());
 }
 
@@ -16,14 +29,30 @@ class HabitTrackerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Habit Tracker',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6366F1)),
-        useMaterial3: true,
-      ),
-      home: const AuthGate(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeNotifier,
+      builder: (context, mode, _) {
+        return MaterialApp(
+          title: 'Habit Tracker',
+          debugShowCheckedModeBanner: false,
+          themeMode: mode,
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6366F1),
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+          darkTheme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: const Color(0xFF6366F1),
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }
@@ -60,7 +89,6 @@ class _AuthGateState extends State<AuthGate> {
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
     return _isLoggedIn ? const MainScaffold() : const LoginScreen();
   }
 }

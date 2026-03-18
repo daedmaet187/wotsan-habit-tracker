@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../main.dart';
 import '../models/habit.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -89,6 +91,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _setTheme(ThemeMode mode) async {
+    themeNotifier.value = mode;
+    final prefs = await SharedPreferences.getInstance();
+    if (mode == ThemeMode.dark) {
+      await prefs.setString('theme_mode', 'dark');
+    } else if (mode == ThemeMode.light) {
+      await prefs.setString('theme_mode', 'light');
+    } else {
+      await prefs.remove('theme_mode');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final issuedAt = (_claims['iat'] is int)
@@ -102,32 +116,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           : RefreshIndicator(
               onRefresh: _load,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                 children: [
-                  Text('Profile', style: Theme.of(context).textTheme.headlineSmall),
+                  Text('Profile', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+
+                  // Account info
+                  Card(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: const Icon(Icons.account_circle_outlined),
+                          title: Text('User ID: ${_claims['id'] ?? 'Unknown'}'),
+                          subtitle: Text('Role: ${_claims['role'] ?? 'user'}'),
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.calendar_month_outlined),
+                          title: const Text('Member Since'),
+                          subtitle: Text(
+                            issuedAt == null
+                                ? 'Unknown'
+                                : '${issuedAt.year}-${issuedAt.month.toString().padLeft(2, '0')}-${issuedAt.day.toString().padLeft(2, '0')}',
+                          ),
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.verified_outlined),
+                          title: const Text('App Version'),
+                          subtitle: Text(appVersion),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.account_circle_outlined),
-                      title: Text('User ID: ${_claims['id'] ?? 'Unknown'}'),
-                      subtitle: Text('Role: ${_claims['role'] ?? 'user'}'),
-                    ),
-                  ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.calendar_month_outlined),
-                      title: const Text('Member Since'),
-                      subtitle: Text(issuedAt == null ? 'Unknown' : '${issuedAt.year}-${issuedAt.month}-${issuedAt.day}'),
-                    ),
-                  ),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.verified_outlined),
-                      title: const Text('App Version'),
-                      subtitle: Text(appVersion),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+
+                  // Stats row
                   Row(
                     children: [
                       Expanded(child: _MiniStat(label: 'Total Habits', value: '$_totalHabits')),
@@ -137,11 +160,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Expanded(child: _MiniStat(label: 'Week Rate', value: '$_completionRate%')),
                     ],
                   ),
+
                   const SizedBox(height: 20),
+
+                  // Appearance section
+                  Text(
+                    'Appearance',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ValueListenableBuilder<ThemeMode>(
+                    valueListenable: themeNotifier,
+                    builder: (context, currentMode, _) {
+                      return Card(
+                        child: Column(
+                          children: [
+                            RadioListTile<ThemeMode>(
+                              value: ThemeMode.light,
+                              groupValue: currentMode,
+                              onChanged: (v) => _setTheme(v!),
+                              title: const Text('Light'),
+                              secondary: const Icon(Icons.light_mode_outlined),
+                            ),
+                            RadioListTile<ThemeMode>(
+                              value: ThemeMode.dark,
+                              groupValue: currentMode,
+                              onChanged: (v) => _setTheme(v!),
+                              title: const Text('Dark'),
+                              secondary: const Icon(Icons.dark_mode_outlined),
+                            ),
+                            RadioListTile<ThemeMode>(
+                              value: ThemeMode.system,
+                              groupValue: currentMode,
+                              onChanged: (v) => _setTheme(v!),
+                              title: const Text('System default'),
+                              secondary: const Icon(Icons.brightness_auto_outlined),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Logout
                   FilledButton.icon(
                     onPressed: _logout,
                     icon: const Icon(Icons.logout),
                     label: const Text('Logout'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                    ),
                   ),
                 ],
               ),
@@ -163,8 +237,9 @@ class _MiniStat extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            Text(value, style: Theme.of(context).textTheme.titleMedium),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 2),
+            Text(label, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
           ],
         ),
       ),
