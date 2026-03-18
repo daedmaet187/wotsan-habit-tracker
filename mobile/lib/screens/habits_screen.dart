@@ -357,6 +357,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
                 ],
               ),
             ),
+        ),
       floatingActionButton: FloatingActionButton(onPressed: () => _upsertHabit(), child: const Icon(Icons.add)),
     );
   }
