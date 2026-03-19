@@ -208,31 +208,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ValueListenableBuilder<ThemeMode>(
                       valueListenable: themeNotifier,
                       builder: (context, currentMode, _) {
-                        return Card(
-                          child: Column(
-                            children: [
-                              RadioListTile<ThemeMode>(
-                                value: ThemeMode.light,
-                                groupValue: currentMode,
-                                onChanged: (v) => _setTheme(v!),
-                                title: const Text('Light'),
-                                secondary: const Icon(Icons.light_mode_outlined),
-                              ),
-                              RadioListTile<ThemeMode>(
-                                value: ThemeMode.dark,
-                                groupValue: currentMode,
-                                onChanged: (v) => _setTheme(v!),
-                                title: const Text('Dark'),
-                                secondary: const Icon(Icons.dark_mode_outlined),
-                              ),
-                              RadioListTile<ThemeMode>(
-                                value: ThemeMode.system,
-                                groupValue: currentMode,
-                                onChanged: (v) => _setTheme(v!),
-                                title: const Text('System default'),
-                                secondary: const Icon(Icons.brightness_auto_outlined),
-                              ),
-                            ],
+                        return RadioGroup<ThemeMode>(
+                          groupValue: currentMode,
+                          onChanged: (v) => _setTheme(v!),
+                          child: Card(
+                            child: Column(
+                              children: [
+                                RadioListTile<ThemeMode>(
+                                  value: ThemeMode.light,
+                                  title: const Text('Light'),
+                                  secondary: const Icon(Icons.light_mode_outlined),
+                                ),
+                                RadioListTile<ThemeMode>(
+                                  value: ThemeMode.dark,
+                                  title: const Text('Dark'),
+                                  secondary: const Icon(Icons.dark_mode_outlined),
+                                ),
+                                RadioListTile<ThemeMode>(
+                                  value: ThemeMode.system,
+                                  title: const Text('System default'),
+                                  secondary: const Icon(Icons.brightness_auto_outlined),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -253,7 +251,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-      ),
+        ),
     );
   }
 }
@@ -272,8 +270,8 @@ class _MiniStat extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
             Text(label, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
