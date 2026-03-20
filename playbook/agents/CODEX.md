@@ -229,6 +229,32 @@ Watson will verify the live endpoint after CI deploys. Codex's job is passing lo
 
 ---
 
+## Rate Limits
+
+Read `playbook/agents/LIMITS.md` before starting any task.
+
+### Working within limits
+
+**Task size**: If a task will produce >200 lines of new code, split it:
+- Commit 1: scaffold (types, empty handlers/stubs, file structure)
+- Commit 2: implementation (fill in logic, pass all verification)
+
+**If you hit HTTP 429 (rate limit)**: Stop. Wait using exponential backoff:
+- Attempt 1: wait 5 seconds → retry
+- Attempt 2: wait 15 seconds → retry
+- Attempt 3: wait 30 seconds → retry
+- Attempt 4: wait 60 seconds → retry
+- Attempt 5+: wait 120 seconds → write BLOCKED to results, notify Watson
+
+**If context is too large**: Write BLOCKED with:
+- List of files you were given that exceed budget
+- The 3–4 files you actually need (so Watson can re-send slimmer context)
+- Do not work with truncated context — incomplete context produces broken code
+
+**If output is truncated**: Stop. Write partial results noting where you stopped. Ask Watson to re-spawn for the remaining work.
+
+---
+
 ## Reading Existing Patterns
 
 Before implementing anything new, read the existing implementation of the most similar thing:
