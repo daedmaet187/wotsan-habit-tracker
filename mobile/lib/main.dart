@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'screens/habits_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/login_screen.dart';
-import 'screens/profile_screen.dart';
-import 'screens/stats_screen.dart';
-import 'services/auth_service.dart';
+import 'router.dart';
 
 // Global theme notifier so any screen can toggle it
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.system);
@@ -21,18 +17,20 @@ Future<void> main() async {
   } else if (saved == 'light') {
     themeNotifier.value = ThemeMode.light;
   }
-  runApp(const HabitTrackerApp());
+  runApp(const ProviderScope(child: HabitTrackerApp()));
 }
 
-class HabitTrackerApp extends StatelessWidget {
+class HabitTrackerApp extends ConsumerWidget {
   const HabitTrackerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeNotifier,
       builder: (context, mode, _) {
-        return MaterialApp(
+        return MaterialApp.router(
           title: 'Habit Tracker',
           debugShowCheckedModeBanner: false,
           themeMode: mode,
@@ -50,79 +48,9 @@ class HabitTrackerApp extends StatelessWidget {
             ),
             useMaterial3: true,
           ),
-          home: const AuthGate(),
+          routerConfig: router,
         );
       },
-    );
-  }
-}
-
-class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
-
-  @override
-  State<AuthGate> createState() => _AuthGateState();
-}
-
-class _AuthGateState extends State<AuthGate> {
-  final AuthService _authService = AuthService();
-  bool _loading = true;
-  bool _isLoggedIn = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    final loggedIn = await _authService.isLoggedIn();
-    if (!mounted) return;
-    setState(() {
-      _isLoggedIn = loggedIn;
-      _loading = false;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    return _isLoggedIn ? const MainScaffold() : const LoginScreen();
-  }
-}
-
-class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
-
-  @override
-  State<MainScaffold> createState() => _MainScaffoldState();
-}
-
-class _MainScaffoldState extends State<MainScaffold> {
-  int _selectedIndex = 0;
-
-  // Kept in state so widgets are never recreated on tab switch — their internal
-  // state (scroll position, loaded data) is fully preserved.
-  final List<Widget> _pages = const [HomeScreen(), HabitsScreen(), StatsScreen(), ProfileScreen()];
-
-  @override
-  Widget build(BuildContext context) {
-    final pages = _pages;
-
-    return Scaffold(
-      body: IndexedStack(index: _selectedIndex, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.today), label: 'Today'),
-          NavigationDestination(icon: Icon(Icons.list_alt), label: 'Habits'),
-          NavigationDestination(icon: Icon(Icons.bar_chart), label: 'Stats'),
-          NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-      ),
     );
   }
 }

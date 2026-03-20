@@ -1,26 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../main.dart';
+import '../providers/auth_provider.dart';
+import '../providers/api_provider.dart';
 import '../services/auth_service.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  final _authService = AuthService();
+
+  late final AuthService _authService;
 
   bool _isLoading = false;
   bool _isRegisterMode = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = AuthService(apiService: ref.read(apiServiceProvider));
+  }
 
   @override
   void dispose() {
@@ -49,10 +59,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const MainScaffold()),
-        (route) => false,
-      );
+      // Refresh auth state so the router redirect picks it up
+      await ref.read(authStateProvider.notifier).refresh();
+      if (mounted) context.go('/today');
     } catch (e) {
       if (!mounted) return;
       setState(() {

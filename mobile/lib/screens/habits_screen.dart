@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 
 import '../models/habit.dart';
+import '../providers/api_provider.dart';
 import '../services/api_service.dart';
 import '../utils/habit_metrics.dart';
 
-class HabitsScreen extends StatefulWidget {
+class HabitsScreen extends ConsumerStatefulWidget {
   const HabitsScreen({super.key});
 
   @override
-  State<HabitsScreen> createState() => _HabitsScreenState();
+  ConsumerState<HabitsScreen> createState() => _HabitsScreenState();
 }
 
-class _HabitsScreenState extends State<HabitsScreen> {
-  final _apiService = ApiService();
+class _HabitsScreenState extends ConsumerState<HabitsScreen> {
+  late final ApiService _apiService;
   final List<String> _presetColors = const ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#a855f7'];
 
   bool _isLoading = true;
@@ -26,6 +28,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
   @override
   void initState() {
     super.initState();
+    _apiService = ref.read(apiServiceProvider);
     _loadHabits();
   }
 
@@ -36,6 +39,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
       final habits = response.map((e) => Habit.fromJson(Map<String, dynamic>.from(e as Map))).toList();
       final recentLogs = await _apiService.getRecentLogs(30);
       final streaks = HabitMetrics.streaksForHabits(habits, HabitMetrics.logsByDateByHabit(recentLogs), 30);
+      if (!mounted) return;
       setState(() {
         _habits = habits;
         _streaks = streaks;
@@ -229,7 +233,6 @@ class _HabitsScreenState extends State<HabitsScreen> {
       if (_sort == 'created') return b.createdAt.compareTo(a.createdAt);
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
-
     return {
       'daily': filtered.where((h) => h.frequency == 'daily').toList(),
       'weekly': filtered.where((h) => h.frequency == 'weekly').toList(),
@@ -386,5 +389,6 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 44;
 
   @override
-  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) => oldDelegate.title != title || oldDelegate.color != color;
+  bool shouldRebuild(covariant _HeaderDelegate oldDelegate) =>
+      oldDelegate.title != title || oldDelegate.color != color;
 }

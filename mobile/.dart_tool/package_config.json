@@ -3,15 +3,21 @@
   "packages": [
     {
       "name": "_fe_analyzer_shared",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-88.0.0",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/_fe_analyzer_shared-85.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.5"
     },
     {
       "name": "analyzer",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/analyzer-8.1.1",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/analyzer-7.6.0",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.5"
+    },
+    {
+      "name": "analyzer_plugin",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/analyzer_plugin-0.13.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.5"
     },
     {
       "name": "args",
@@ -33,15 +39,15 @@
     },
     {
       "name": "build",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build-4.0.4",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build-2.5.4",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
     {
       "name": "build_config",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build_config-1.3.0",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build_config-1.1.2",
       "packageUri": "lib/",
-      "languageVersion": "3.7"
+      "languageVersion": "3.6"
     },
     {
       "name": "build_daemon",
@@ -50,8 +56,20 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "build_resolvers",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build_resolvers-2.5.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
       "name": "build_runner",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build_runner-2.13.0",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build_runner-2.5.4",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
+    },
+    {
+      "name": "build_runner_core",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/build_runner_core-9.1.2",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -78,6 +96,18 @@
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/checked_yaml-2.0.3",
       "packageUri": "lib/",
       "languageVersion": "2.19"
+    },
+    {
+      "name": "ci",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/ci-0.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
+      "name": "cli_util",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/cli_util-0.4.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "clock",
@@ -122,8 +152,32 @@
       "languageVersion": "3.1"
     },
     {
+      "name": "custom_lint",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/custom_lint-0.7.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "custom_lint_builder",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/custom_lint_builder-0.7.6",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "custom_lint_core",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/custom_lint_core-0.7.5",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "custom_lint_visitor",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/custom_lint_visitor-1.0.0+7.7.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "dart_style",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/dart_style-3.1.2",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/dart_style-3.1.1",
       "packageUri": "lib/",
       "languageVersion": "3.7"
     },
@@ -171,7 +225,7 @@
     },
     {
       "name": "fl_chart",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/fl_chart-0.69.2",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/fl_chart-0.70.2",
       "packageUri": "lib/",
       "languageVersion": "3.2"
     },
@@ -189,9 +243,9 @@
     },
     {
       "name": "flutter_lints",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/flutter_lints-3.0.2",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/flutter_lints-5.0.0",
       "packageUri": "lib/",
-      "languageVersion": "3.1"
+      "languageVersion": "3.5"
     },
     {
       "name": "flutter_riverpod",
@@ -224,6 +278,18 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "freezed_annotation",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/freezed_annotation-3.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "frontend_server_client",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/frontend_server_client-4.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
       "name": "glob",
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/glob-2.1.3",
       "packageUri": "lib/",
@@ -231,15 +297,21 @@
     },
     {
       "name": "go_router",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/go_router-13.2.5",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/go_router-14.8.1",
       "packageUri": "lib/",
-      "languageVersion": "3.2"
+      "languageVersion": "3.4"
     },
     {
       "name": "graphs",
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/graphs-2.3.2",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "hotreloader",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/hotreloader-4.3.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "http",
@@ -261,15 +333,21 @@
     },
     {
       "name": "intl",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/intl-0.19.0",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/intl-0.20.2",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.3"
     },
     {
       "name": "io",
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/io-1.0.5",
       "packageUri": "lib/",
       "languageVersion": "3.4"
+    },
+    {
+      "name": "js",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/js-0.7.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.7"
     },
     {
       "name": "json_annotation",
@@ -297,9 +375,9 @@
     },
     {
       "name": "lints",
-      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/lints-3.0.0",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/lints-5.1.1",
       "packageUri": "lib/",
-      "languageVersion": "3.0"
+      "languageVersion": "3.6"
     },
     {
       "name": "logging",
@@ -398,6 +476,36 @@
       "languageVersion": "2.17"
     },
     {
+      "name": "riverpod_analyzer_utils",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/riverpod_analyzer_utils-0.5.10",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
+    },
+    {
+      "name": "riverpod_annotation",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/riverpod_annotation-2.6.1",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "riverpod_generator",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/riverpod_generator-2.6.5",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "riverpod_lint",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/riverpod_lint-2.6.5",
+      "packageUri": "lib/",
+      "languageVersion": "2.17"
+    },
+    {
+      "name": "rxdart",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/rxdart-0.28.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "shared_preferences",
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/shared_preferences-2.5.3",
       "packageUri": "lib/",
@@ -458,6 +566,12 @@
       "languageVersion": "3.7"
     },
     {
+      "name": "source_gen",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/source_gen-2.0.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.6"
+    },
+    {
       "name": "source_span",
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/source_span-1.10.1",
       "packageUri": "lib/",
@@ -506,10 +620,22 @@
       "languageVersion": "3.5"
     },
     {
+      "name": "timing",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/timing-1.0.2",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
+    },
+    {
       "name": "typed_data",
       "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/typed_data-1.4.0",
       "packageUri": "lib/",
       "languageVersion": "3.5"
+    },
+    {
+      "name": "uuid",
+      "rootUri": "file:///home/watson/.pub-cache/hosted/pub.dev/uuid-4.5.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.0"
     },
     {
       "name": "vector_math",
@@ -563,10 +689,10 @@
       "name": "habit_tracker",
       "rootUri": "../",
       "packageUri": "lib/",
-      "languageVersion": "3.3"
+      "languageVersion": "3.7"
     }
   ],
-  "generated": "2026-03-18T03:09:36.116606Z",
+  "generated": "2026-03-20T10:19:57.509404Z",
   "generator": "pub",
   "generatorVersion": "3.7.0",
   "flutterRoot": "file:///home/watson/flutter",

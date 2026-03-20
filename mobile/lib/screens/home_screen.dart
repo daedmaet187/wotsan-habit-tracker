@@ -2,23 +2,26 @@ import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../models/habit.dart';
+import '../providers/api_provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../utils/habit_metrics.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final _apiService = ApiService();
-  final _authService = AuthService();
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late final ApiService _apiService;
+  late final AuthService _authService;
   late final ConfettiController _confettiController;
 
   bool _isLoading = true;
@@ -43,6 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _apiService = ref.read(apiServiceProvider);
+    _authService = ref.read(authServiceProvider);
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _loadData();
     _loadUserName();
@@ -82,6 +87,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final logsByDateByHabit = HabitMetrics.logsByDateByHabit(recentLogs);
       final streaks = HabitMetrics.streaksForHabits(habits, logsByDateByHabit, 30);
 
+      if (!mounted) return;
       setState(() {
         _habits = habits;
         _loggedToday = logsByHabit.keys.toSet();
@@ -102,14 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _toggleHabit(Habit habit, bool checked) async {
     HapticFeedback.mediumImpact();
 
-    // Optimistic update — reflect change immediately without a loading spinner
     final previousLogged = Set<String>.from(_loggedToday);
     final previousLogIds = Map<String, String>.from(_logIdsByHabit);
 
     setState(() {
       if (checked) {
         _loggedToday.add(habit.id);
-        // Placeholder id — replaced after API response
         _logIdsByHabit[habit.id] = '__pending__';
       } else {
         _loggedToday.remove(habit.id);
@@ -130,7 +134,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
 
-      // Fire confetti if all habits done
       if (mounted) {
         final allDone = _habits.isNotEmpty && _habits.every((h) => _loggedToday.contains(h.id));
         if (allDone && !_allDoneConfettiFired) {
@@ -139,7 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (_) {
-      // Roll back optimistic update on failure
       if (!mounted) return;
       setState(() {
         _loggedToday
@@ -266,7 +268,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                               ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
                               const SizedBox(height: 20),
-                              // Progress card — modern design replacing circular indicator
                               _ProgressCard(
                                 doneCount: doneCount,
                                 total: visibleHabits.length,
@@ -280,7 +281,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 motivationalText: _motivationalText(progress),
                               ).animate().fadeIn(duration: 500.ms, delay: 100.ms).slideY(begin: 0.15, end: 0),
                               const SizedBox(height: 16),
-                              // Filter chips
                               SingleChildScrollView(
                                 scrollDirection: Axis.horizontal,
                                 child: Row(
@@ -366,7 +366,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-          // Confetti widget anchored at top center
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -390,7 +389,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ---------------------------------------------------------------------------
-// Progress card — replaces old circular indicator
+// Progress card
 // ---------------------------------------------------------------------------
 class _ProgressCard extends StatelessWidget {
   const _ProgressCard({
@@ -433,7 +432,6 @@ class _ProgressCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top row: big counter + label ──────────────────────────────
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -477,19 +475,14 @@ class _ProgressCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 4),
-
           Text(
             motivationalText,
             style: theme.textTheme.bodySmall?.copyWith(
               color: (isDone ? Colors.white : cs.onPrimaryContainer).withValues(alpha: 0.75),
             ),
           ),
-
           const SizedBox(height: 14),
-
-          // ── Gradient progress bar ─────────────────────────────────────
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: TweenAnimationBuilder<double>(
@@ -525,8 +518,6 @@ class _ProgressCard extends StatelessWidget {
               },
             ),
           ),
-
-          // ── Habit dots row (one bubble per habit) ─────────────────────
           if (total > 0) ...[
             const SizedBox(height: 14),
             _HabitDots(
@@ -542,7 +533,6 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-/// Row of small rounded bubbles — one per habit, filled with its color when done.
 class _HabitDots extends StatelessWidget {
   const _HabitDots({
     required this.habits,
@@ -559,7 +549,6 @@ class _HabitDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    // If too many habits, show dots; up to ~12 fit comfortably, above that show compact bar segments
     if (habits.length <= 14) {
       return Wrap(
         spacing: 6,
@@ -581,14 +570,12 @@ class _HabitDots extends StatelessWidget {
               ),
             ),
             child: done
-                ? Icon(Icons.check_rounded, size: 14, color: isDone ? Colors.white : Colors.white)
+                ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
                 : null,
           );
         }).toList(),
       );
     }
-
-    // Compact: thin color-coded segments for large habit counts
     return ClipRRect(
       borderRadius: BorderRadius.circular(6),
       child: Row(
@@ -612,7 +599,6 @@ class _HabitDots extends StatelessWidget {
   }
 }
 
-// ---------------------------------------------------------------------------
 class _HabitTile extends StatelessWidget {
   const _HabitTile({
     required this.habit,
@@ -646,9 +632,7 @@ class _HabitTile extends StatelessWidget {
         child: IntrinsicHeight(
           child: Row(
             children: [
-              // Colored left border strip (4px)
               Container(width: 4, color: dotColor),
-              // Tile content
               Expanded(
                 child: ListTile(
                   onTap: () => onToggle(!checked),
@@ -662,10 +646,7 @@ class _HabitTile extends StatelessWidget {
                   ),
                   subtitle: Row(
                     children: [
-                      Text(
-                        '🔥 $streak',
-                        style: theme.textTheme.bodySmall,
-                      ),
+                      Text('🔥 $streak', style: theme.textTheme.bodySmall),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),

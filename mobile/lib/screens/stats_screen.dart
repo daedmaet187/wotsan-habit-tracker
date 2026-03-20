@@ -1,21 +1,24 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../models/habit.dart';
+import '../providers/api_provider.dart';
 import '../services/api_service.dart';
 import '../utils/habit_metrics.dart';
 
-class StatsScreen extends StatefulWidget {
+class StatsScreen extends ConsumerStatefulWidget {
   const StatsScreen({super.key});
 
   @override
-  State<StatsScreen> createState() => _StatsScreenState();
+  ConsumerState<StatsScreen> createState() => _StatsScreenState();
 }
 
-class _StatsScreenState extends State<StatsScreen> {
-  final _api = ApiService();
+class _StatsScreenState extends ConsumerState<StatsScreen> {
+  late final ApiService _api;
+
   bool _loading = true;
   List<Habit> _habits = [];
   Map<String, Set<String>> _logsByHabit = {};
@@ -24,6 +27,7 @@ class _StatsScreenState extends State<StatsScreen> {
   @override
   void initState() {
     super.initState();
+    _api = ref.read(apiServiceProvider);
     _load();
   }
 
@@ -37,6 +41,7 @@ class _StatsScreenState extends State<StatsScreen> {
           .toList();
       final recentLogs = await _api.getRecentLogs(30);
       final logsByHabit = HabitMetrics.logsByDateByHabit(recentLogs);
+      if (!mounted) return;
       setState(() {
         _habits = habits;
         _logsByHabit = logsByHabit;
@@ -74,7 +79,6 @@ class _StatsScreenState extends State<StatsScreen> {
                   children: [
                     Text('Stats', style: theme.textTheme.headlineSmall),
                     const SizedBox(height: 12),
-                    // 3 stat cards
                     Row(
                       children: [
                         Expanded(
@@ -106,7 +110,6 @@ class _StatsScreenState extends State<StatsScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    // 30-day heatmap
                     Text('30-Day Activity', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     _HeatmapGrid(
@@ -115,7 +118,6 @@ class _StatsScreenState extends State<StatsScreen> {
                       primaryColor: colorScheme.primary,
                     ).animate().fadeIn(duration: 500.ms, delay: 300.ms),
                     const SizedBox(height: 24),
-                    // BarChart
                     if (_habits.isNotEmpty) ...[
                       Text('Habit Completion %', style: theme.textTheme.titleMedium),
                       const SizedBox(height: 8),
@@ -129,7 +131,6 @@ class _StatsScreenState extends State<StatsScreen> {
                       ).animate().fadeIn(duration: 500.ms, delay: 400.ms),
                       const SizedBox(height: 24),
                     ],
-                    // Streak leaderboard
                     Text('Streak Leaders', style: theme.textTheme.titleMedium),
                     const SizedBox(height: 8),
                     if (top5.isEmpty)
@@ -160,10 +161,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                  Text(
-                                    '🔥 ${e.value}d',
-                                    style: theme.textTheme.bodySmall,
-                                  ),
+                                  Text('🔥 ${e.value}d', style: theme.textTheme.bodySmall),
                                 ],
                               ),
                               const SizedBox(height: 4),
@@ -173,9 +171,7 @@ class _StatsScreenState extends State<StatsScreen> {
                                 builder: (context, val, _) => LinearProgressIndicator(
                                   value: val,
                                   backgroundColor: colorScheme.surfaceContainerHighest,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    colorScheme.primary,
-                                  ),
+                                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                                 ),
                               ),
                             ],
@@ -253,7 +249,6 @@ class _HeatmapGrid extends StatelessWidget {
         }
         final ratio = habits.isEmpty ? 0.0 : (doneCount / habits.length).clamp(0.0, 1.0);
         final opacity = ratio == 0 ? 0.08 : (0.2 + ratio * 0.8).clamp(0.2, 1.0);
-
         return Tooltip(
           message: '${DateFormat('MMM d').format(day)}: $doneCount/${habits.length}',
           child: Container(

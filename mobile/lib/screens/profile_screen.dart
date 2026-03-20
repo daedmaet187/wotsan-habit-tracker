@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../main.dart';
 import '../models/habit.dart';
+import '../providers/api_provider.dart';
+import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../utils/habit_metrics.dart';
-import 'login_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final _auth = AuthService();
-  final _api = ApiService();
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  late final AuthService _auth;
+  late final ApiService _api;
+
   bool _loading = true;
   String _fullName = '';
   String _email = '';
@@ -29,6 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _auth = ref.read(authServiceProvider);
+    _api = ref.read(apiServiceProvider);
     _load();
   }
 
@@ -46,13 +52,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final logsByHabit = HabitMetrics.logsByDateByHabit(recentLogs);
       final streaks = HabitMetrics.streaksForHabits(habits, logsByHabit, 30);
 
-      // Try to get role from /me endpoint
       String role = 'user';
       try {
         final me = await _api.getMe();
         role = me['role']?.toString() ?? 'user';
       } catch (_) {}
 
+      if (!mounted) return;
       setState(() {
         _fullName = fullName;
         _email = email;
@@ -75,10 +81,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await _auth.logout();
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-        (route) => false,
-      );
+      await ref.read(authStateProvider.notifier).refresh();
+      if (mounted) context.go('/login');
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -110,7 +114,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final appVersion = const String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0+1');
+    const appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0+1');
 
     return Scaffold(
       body: SafeArea(
@@ -126,7 +130,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 24),
-                    // Avatar + name + email + role
                     Center(
                       child: Column(
                         children: [
@@ -169,10 +172,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Stats row
                     Row(
                       children: [
                         Expanded(child: _MiniStat(label: 'Total Habits', value: '$_totalHabits')),
@@ -182,21 +182,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Expanded(child: _MiniStat(label: 'Week Rate', value: '$_completionRate%')),
                       ],
                     ),
-
                     const SizedBox(height: 20),
-
-                    // App version
                     Card(
                       child: ListTile(
                         leading: const Icon(Icons.info_outline_rounded),
                         title: const Text('App Version'),
-                        subtitle: Text(appVersion),
+                        subtitle: const Text(appVersion),
                       ),
                     ),
-
                     const SizedBox(height: 20),
-
-                    // Appearance section
                     Text(
                       'Appearance',
                       style: theme.textTheme.labelLarge?.copyWith(
@@ -231,10 +225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         );
                       },
                     ),
-
                     const SizedBox(height: 20),
-
-                    // Logout
                     FilledButton.icon(
                       onPressed: _logout,
                       icon: const Icon(Icons.logout),
@@ -247,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
-        ),
+      ),
     );
   }
 }
@@ -266,8 +257,8 @@ class _MiniStat extends StatelessWidget {
         child: Column(
           children: [
             Text(
-                value,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 2),
             Text(label, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
