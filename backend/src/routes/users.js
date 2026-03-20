@@ -1,17 +1,15 @@
-const router = require('express').Router();
-const auth = require('../middleware/auth');
-const pool = require('../config/db');
+import { Router } from 'express';
+import auth from '../middleware/auth.js';
+import pool from '../config/db.js';
+
+const router = Router();
 
 router.get('/me', auth, async (req, res) => {
-  try {
-    const { rows } = await pool.query(
-      'SELECT id, email, full_name, role, created_at FROM users WHERE id=$1',
-      [req.user.id]
-    );
-    res.json(rows[0] || null);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  const { rows } = await pool.query(
+    'SELECT id, email, full_name, role, created_at FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  res.json(rows[0] || null);
 });
 
-module.exports = router;
+export default router;

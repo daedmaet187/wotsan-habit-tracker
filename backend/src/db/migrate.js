@@ -1,6 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const pool = require('../config/db');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import pool from '../config/db.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function migrate() {
   const migrationsDir = path.join(__dirname, 'migrations');
