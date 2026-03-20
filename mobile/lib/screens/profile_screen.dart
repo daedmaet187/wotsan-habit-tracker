@@ -208,32 +208,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ValueListenableBuilder<ThemeMode>(
                       valueListenable: themeNotifier,
                       builder: (context, currentMode, _) {
-                        return Card(
-                          child: Column(
-                            children: [
-                              RadioListTile<ThemeMode>(
-                                value: ThemeMode.light,
-                                groupValue: currentMode,
-                                onChanged: (v) => _setTheme(v!),
-                                title: const Text('Light'),
-                                secondary: const Icon(Icons.light_mode_outlined),
-                              ),
-                              RadioListTile<ThemeMode>(
-                                value: ThemeMode.dark,
-                                groupValue: currentMode,
-                                onChanged: (v) => _setTheme(v!),
-                                title: const Text('Dark'),
-                                secondary: const Icon(Icons.dark_mode_outlined),
-                              ),
-                              RadioListTile<ThemeMode>(
-                                value: ThemeMode.system,
-                                groupValue: currentMode,
-                                onChanged: (v) => _setTheme(v!),
-                                title: const Text('System default'),
-                                secondary: const Icon(Icons.brightness_auto_outlined),
-                              ),
-                            ],
-                          ),
+                        return SegmentedButton<ThemeMode>(
+                          segments: const [
+                            ButtonSegment(
+                              value: ThemeMode.light,
+                              label: Text('Light'),
+                              icon: Icon(Icons.light_mode_outlined),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.dark,
+                              label: Text('Dark'),
+                              icon: Icon(Icons.dark_mode_outlined),
+                            ),
+                            ButtonSegment(
+                              value: ThemeMode.system,
+                              label: Text('Auto'),
+                              icon: Icon(Icons.brightness_auto_outlined),
+                            ),
+                          ],
+                          selected: {currentMode},
+                          onSelectionChanged: (s) => _setTheme(s.first),
                         );
                       },
                     ),
