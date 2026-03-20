@@ -7,7 +7,7 @@ export const register = async (req, res) => {
   const hash = await bcrypt.hash(password, 12);
   const { rows } = await pool.query(
     'INSERT INTO users (email, password_hash, full_name) VALUES ($1, $2, $3) RETURNING id, email, full_name, role',
-    [email, hash, full_name]
+    [email, hash, full_name || null]
   );
   const token = jwt.sign(
     { id: rows[0].id, role: rows[0].role, full_name: rows[0].full_name, email: rows[0].email },
