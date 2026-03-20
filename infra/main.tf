@@ -8,6 +8,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 4.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.6"
+    }
   }
 
   backend "s3" {
@@ -23,6 +27,46 @@ provider "aws" {
 
 provider "cloudflare" {
   api_token = var.cf_dns_token
+}
+
+# Generate a cryptographically strong 32-char DB password
+resource "random_password" "db_password" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?" # excludes @/\ which break connection strings
+  min_upper        = 4
+  min_lower        = 4
+  min_numeric      = 4
+  min_special      = 2
+}
+
+# Generate a 64-char hex JWT secret (256-bit entropy)
+resource "random_bytes" "jwt_secret" {
+  length = 32 # 32 bytes = 64 hex chars
+}
+
+# Store DB password in Secrets Manager
+resource "aws_secretsmanager_secret" "db_password" {
+  name                    = "${var.project}/db-password"
+  description             = "RDS PostgreSQL password for ${var.project}"
+  recovery_window_in_days = 7
+}
+
+resource "aws_secretsmanager_secret_version" "db_password" {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = random_password.db_password.result
+}
+
+# Store JWT secret in Secrets Manager
+resource "aws_secretsmanager_secret" "jwt_secret" {
+  name                    = "${var.project}/jwt-secret"
+  description             = "JWT signing secret for ${var.project} API"
+  recovery_window_in_days = 7
+}
+
+resource "aws_secretsmanager_secret_version" "jwt_secret" {
+  secret_id     = aws_secretsmanager_secret.jwt_secret.id
+  secret_string = random_bytes.jwt_secret.hex
 }
 
 module "network" {
@@ -43,7 +87,7 @@ data "aws_security_group" "ecs" {
 module "rds" {
   source                = "./modules/rds"
   project               = var.project
-  db_password           = var.db_password
+  db_password           = random_password.db_password.result
   vpc_id                = module.network.vpc_id
   subnet_ids            = module.network.private_subnet_ids
   allowed_cidr_blocks   = module.network.private_subnet_cidrs
@@ -61,8 +105,9 @@ module "ecs" {
   source                = "./modules/ecs"
   project               = var.project
   image_url             = "${module.ecr.repository_url}:latest"
-  db_url                = module.rds.connection_string
-  jwt_secret            = var.jwt_secret
+  db_url                = "postgresql://habitadmin:${random_password.db_password.result}@${module.rds.db_endpoint}/habittracker"
+  jwt_secret_arn        = aws_secretsmanager_secret_version.jwt_secret.arn
+  db_password_arn       = aws_secretsmanager_secret_version.db_password.arn
   target_group_arn      = module.alb.target_group_arn
   vpc_id                = module.network.vpc_id
   subnet_ids            = module.network.public_subnet_ids

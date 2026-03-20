@@ -51,9 +51,20 @@ resource "aws_db_instance" "postgres" {
   vpc_security_group_ids = [aws_security_group.rds.id]
   skip_final_snapshot    = true
   publicly_accessible    = false
+
+  storage_encrypted       = true
+  deletion_protection     = true
+  backup_retention_period = 7
+  backup_window           = "03:00-04:00"
+  maintenance_window      = "Mon:04:00-Mon:05:00"
 }
 
 output "connection_string" {
   value     = "postgresql://habitadmin:${var.db_password}@${aws_db_instance.postgres.endpoint}/habittracker"
+  sensitive = true
+}
+
+output "db_endpoint" {
+  value     = aws_db_instance.postgres.endpoint
   sensitive = true
 }

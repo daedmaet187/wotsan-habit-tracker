@@ -5,9 +5,8 @@ variable "db_url" {
   sensitive = true
 }
 
-variable "jwt_secret" {
-  sensitive = true
-}
+variable "jwt_secret_arn" {}
+variable "db_password_arn" {}
 
 variable "target_group_arn" {}
 variable "vpc_id" {}
@@ -35,6 +34,26 @@ resource "aws_iam_role" "ecs_execution" {
 resource "aws_iam_role_policy_attachment" "ecs_execution" {
   role       = aws_iam_role.ecs_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role_policy" "ecs_secrets" {
+  name = "${var.project}-ecs-secrets-policy"
+  role = aws_iam_role.ecs_execution.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ]
+      Resource = [
+        var.jwt_secret_arn,
+        var.db_password_arn
+      ]
+    }]
+  })
 }
 
 resource "aws_security_group" "ecs" {
@@ -85,8 +104,10 @@ resource "aws_ecs_task_definition" "api" {
       { name = "PORT", value = "3000" },
       { name = "NODE_ENV", value = "production" },
       { name = "DATABASE_URL", value = var.db_url },
-      { name = "JWT_SECRET", value = var.jwt_secret },
       { name = "JWT_EXPIRES_IN", value = "7d" }
+    ]
+    secrets = [
+      { name = "JWT_SECRET", valueFrom = var.jwt_secret_arn }
     ]
     logConfiguration = {
       logDriver = "awslogs"
@@ -109,7 +130,7 @@ resource "aws_ecs_service" "api" {
   network_configuration {
     subnets          = var.subnet_ids
     security_groups  = [aws_security_group.ecs.id]
-    assign_public_ip = true
+    assign_public_ip = true # TODO: move to private subnet + NAT gateway for production scale
   }
 
   load_balancer {
