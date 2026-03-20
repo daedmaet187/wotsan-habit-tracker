@@ -152,9 +152,41 @@ Daily session log. Write:
 
 ---
 
+## Rate Limits
+
+Read `playbook/agents/LIMITS.md` before spawning any Codex agent.
+
+Quick reference for this project:
+
+| Rule | Value |
+|---|---|
+| Max parallel Codex agents | 3 (backend + admin + mobile) |
+| Safe context per Codex call | ~40,000 input tokens |
+| Target output per Codex task | <10,000 tokens |
+| On HTTP 429 | Wait 5s → 15s → 30s → 60s → 120s → BLOCKED |
+
+When Codex reports BLOCKED:
+1. Check the reason: rate limit? missing file? task too large?
+2. Rate limit → wait for backoff, re-spawn same task
+3. Task too large → split into scaffold + implementation tasks
+4. Missing file → identify which prerequisite task is needed first
+5. Never let a BLOCKED Codex agent block other parallel agents
+
+---
+
 ## Red Lines
 
 - Never expose actual values of `DB_PASSWORD`, `JWT_SECRET`, `CF_DNS_TOKEN`, `AWS_SECRET_ACCESS_KEY`
 - Never `tofu apply` without reviewing `tofu plan` output first
 - Never merge infra changes without reading DECISIONS.md for the relevant component
 - Never let Codex commit without running verification commands first
+
+---
+
+## Rate Limits
+
+Read `playbook/agents/LIMITS.md` before spawning any subagent. Key rules:
+- Claude Pro: 50 req/min, 100k tokens/min — max task context: 40k tokens
+- Max 3 parallel agents at once (backend + admin + mobile)
+- Exponential backoff on 429: 5s → 15s → 30s → 60s → 120s → escalate
+- Task size rule: one layer per Codex call, target <10k output tokens

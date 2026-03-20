@@ -244,3 +244,13 @@ Before implementing anything new, read the existing implementation of the most s
 | New CI workflow | `.github/workflows/backend.yml` |
 
 Never guess at patterns. Read first, then implement.
+
+---
+
+## Rate Limits & Working Within Limits
+
+Read `playbook/agents/LIMITS.md` for full details. Summary:
+- If a task requires >200 lines of new code: split into scaffold commit + logic commit
+- On HTTP 429: exponential backoff — 5s, 15s, 30s, 60s, 120s — then report BLOCKED to Watson
+- If context window warning appears: ask Watson to provide a smaller file slice
+- Never pass the entire codebase as context — only the 3–4 most relevant files
