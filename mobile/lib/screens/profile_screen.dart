@@ -208,29 +208,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ValueListenableBuilder<ThemeMode>(
                       valueListenable: themeNotifier,
                       builder: (context, currentMode, _) {
-                        return RadioGroup<ThemeMode>(
-                          groupValue: currentMode,
-                          onChanged: (v) => _setTheme(v!),
-                          child: Card(
-                            child: Column(
-                              children: [
-                                RadioListTile<ThemeMode>(
-                                  value: ThemeMode.light,
-                                  title: const Text('Light'),
-                                  secondary: const Icon(Icons.light_mode_outlined),
-                                ),
-                                RadioListTile<ThemeMode>(
-                                  value: ThemeMode.dark,
-                                  title: const Text('Dark'),
-                                  secondary: const Icon(Icons.dark_mode_outlined),
-                                ),
-                                RadioListTile<ThemeMode>(
-                                  value: ThemeMode.system,
-                                  title: const Text('System default'),
-                                  secondary: const Icon(Icons.brightness_auto_outlined),
-                                ),
-                              ],
-                            ),
+                        return Card(
+                          child: Column(
+                            children: [
+                              RadioListTile<ThemeMode>(
+                                value: ThemeMode.light,
+                                groupValue: currentMode,
+                                onChanged: (v) => _setTheme(v!),
+                                title: const Text('Light'),
+                                secondary: const Icon(Icons.light_mode_outlined),
+                              ),
+                              RadioListTile<ThemeMode>(
+                                value: ThemeMode.dark,
+                                groupValue: currentMode,
+                                onChanged: (v) => _setTheme(v!),
+                                title: const Text('Dark'),
+                                secondary: const Icon(Icons.dark_mode_outlined),
+                              ),
+                              RadioListTile<ThemeMode>(
+                                value: ThemeMode.system,
+                                groupValue: currentMode,
+                                onChanged: (v) => _setTheme(v!),
+                                title: const Text('System default'),
+                                secondary: const Icon(Icons.brightness_auto_outlined),
+                              ),
+                            ],
                           ),
                         );
                       },

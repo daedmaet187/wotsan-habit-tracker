@@ -266,59 +266,19 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                               ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.2, end: 0),
                               const SizedBox(height: 20),
-                              // Circular progress
-                              Center(
-                                child: SizedBox(
-                                  width: 120,
-                                  height: 120,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      CircularProgressIndicator(
-                                        value: progress,
-                                        strokeWidth: 10,
-                                        backgroundColor: colorScheme.surfaceContainerHighest,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          progress == 1.0 ? Colors.green : colorScheme.primary,
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            FittedBox(
-                                              fit: BoxFit.scaleDown,
-                                              child: Text(
-                                                '$doneCount/${visibleHabits.length}',
-                                                style: theme.textTheme.titleLarge?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                maxLines: 1,
-                                              ),
-                                            ),
-                                            Text(
-                                              'done',
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                color: colorScheme.onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ).animate().fadeIn(duration: 500.ms, delay: 100.ms).scale(begin: const Offset(0.8, 0.8)),
-                              const SizedBox(height: 12),
-                              Center(
-                                child: Text(
-                                  _motivationalText(progress),
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
-                              ),
+                              // Progress card — modern design replacing circular indicator
+                              _ProgressCard(
+                                doneCount: doneCount,
+                                total: visibleHabits.length,
+                                progress: progress,
+                                habits: visibleHabits,
+                                loggedToday: _loggedToday,
+                                habitColors: {
+                                  for (final h in visibleHabits)
+                                    h.id: _parseColor(h.color, colorScheme.primary),
+                                },
+                                motivationalText: _motivationalText(progress),
+                              ).animate().fadeIn(duration: 500.ms, delay: 100.ms).slideY(begin: 0.15, end: 0),
                               const SizedBox(height: 16),
                               // Filter chips
                               SingleChildScrollView(
@@ -429,6 +389,230 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Progress card — replaces old circular indicator
+// ---------------------------------------------------------------------------
+class _ProgressCard extends StatelessWidget {
+  const _ProgressCard({
+    required this.doneCount,
+    required this.total,
+    required this.progress,
+    required this.habits,
+    required this.loggedToday,
+    required this.habitColors,
+    required this.motivationalText,
+  });
+
+  final int doneCount;
+  final int total;
+  final double progress;
+  final List<Habit> habits;
+  final Set<String> loggedToday;
+  final Map<String, Color> habitColors;
+  final String motivationalText;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDone = total > 0 && doneCount == total;
+    final accentColor = isDone ? const Color(0xFF22c55e) : cs.primary;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: isDone
+              ? [const Color(0xFF16a34a), const Color(0xFF4ade80)]
+              : [cs.primaryContainer, cs.secondaryContainer],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Top row: big counter + label ──────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              TweenAnimationBuilder<int>(
+                tween: IntTween(begin: 0, end: doneCount),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOut,
+                builder: (context, value, _) => Text(
+                  '$value',
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: isDone ? Colors.white : cs.onPrimaryContainer,
+                    height: 1,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  ' / $total',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: (isDone ? Colors.white : cs.onPrimaryContainer).withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (isDone ? Colors.white : accentColor).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isDone ? '🎉 All done!' : '${(progress * 100).round()}%',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isDone ? Colors.white : cs.onPrimaryContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            motivationalText,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: (isDone ? Colors.white : cs.onPrimaryContainer).withValues(alpha: 0.75),
+            ),
+          ),
+
+          const SizedBox(height: 14),
+
+          // ── Gradient progress bar ─────────────────────────────────────
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress),
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeOutCubic,
+              builder: (context, val, _) {
+                return Stack(
+                  children: [
+                    Container(
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: (isDone ? Colors.white : accentColor).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    FractionallySizedBox(
+                      widthFactor: val,
+                      child: Container(
+                        height: 8,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          gradient: LinearGradient(
+                            colors: isDone
+                                ? [Colors.white, Colors.white70]
+                                : [accentColor, accentColor.withValues(alpha: 0.7)],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+
+          // ── Habit dots row (one bubble per habit) ─────────────────────
+          if (total > 0) ...[
+            const SizedBox(height: 14),
+            _HabitDots(
+              habits: habits,
+              loggedToday: loggedToday,
+              habitColors: habitColors,
+              isDone: isDone,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Row of small rounded bubbles — one per habit, filled with its color when done.
+class _HabitDots extends StatelessWidget {
+  const _HabitDots({
+    required this.habits,
+    required this.loggedToday,
+    required this.habitColors,
+    required this.isDone,
+  });
+
+  final List<Habit> habits;
+  final Set<String> loggedToday;
+  final Map<String, Color> habitColors;
+  final bool isDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    // If too many habits, show dots; up to ~12 fit comfortably, above that show compact bar segments
+    if (habits.length <= 14) {
+      return Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: habits.map((h) {
+          final done = loggedToday.contains(h.id);
+          final color = habitColors[h.id] ?? cs.primary;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: done ? color : (isDone ? Colors.white24 : cs.onPrimaryContainer.withValues(alpha: 0.12)),
+              border: done ? null : Border.all(
+                color: isDone ? Colors.white38 : cs.onPrimaryContainer.withValues(alpha: 0.25),
+                width: 1.5,
+              ),
+            ),
+            child: done
+                ? Icon(Icons.check_rounded, size: 14, color: isDone ? Colors.white : Colors.white)
+                : null,
+          );
+        }).toList(),
+      );
+    }
+
+    // Compact: thin color-coded segments for large habit counts
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(6),
+      child: Row(
+        children: habits.map((h) {
+          final done = loggedToday.contains(h.id);
+          final color = habitColors[h.id] ?? cs.primary;
+          return Expanded(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              height: 10,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: done ? color : (isDone ? Colors.white24 : cs.onPrimaryContainer.withValues(alpha: 0.15)),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 class _HabitTile extends StatelessWidget {
   const _HabitTile({
     required this.habit,
