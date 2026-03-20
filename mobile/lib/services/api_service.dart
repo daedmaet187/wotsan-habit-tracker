@@ -62,8 +62,9 @@ class ApiService {
     await _dio.delete('/api/habits/$id');
   }
 
-  Future<void> logHabit(String habitId, String date) async {
-    await _dio.post('/api/logs', data: {'habit_id': habitId, 'logged_date': date});
+  Future<Map<String, dynamic>> logHabit(String habitId, String date) async {
+    final res = await _dio.post('/api/logs', data: {'habit_id': habitId, 'logged_date': date});
+    return Map<String, dynamic>.from(res.data as Map);
   }
 
   Future<List<dynamic>> getLogsByDate(String date) async {

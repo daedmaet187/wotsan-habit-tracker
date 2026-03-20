@@ -103,9 +103,13 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
 
+  // Kept in state so widgets are never recreated on tab switch — their internal
+  // state (scroll position, loaded data) is fully preserved.
+  final List<Widget> _pages = const [HomeScreen(), HabitsScreen(), StatsScreen(), ProfileScreen()];
+
   @override
   Widget build(BuildContext context) {
-    const pages = [HomeScreen(), HabitsScreen(), StatsScreen(), ProfileScreen()];
+    final pages = _pages;
 
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: pages),

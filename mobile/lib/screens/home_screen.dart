@@ -101,23 +101,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _toggleHabit(Habit habit, bool checked) async {
     HapticFeedback.mediumImpact();
+
+    // Optimistic update — reflect change immediately without a loading spinner
+    final previousLogged = Set<String>.from(_loggedToday);
+    final previousLogIds = Map<String, String>.from(_logIdsByHabit);
+
+    setState(() {
+      if (checked) {
+        _loggedToday.add(habit.id);
+        // Placeholder id — replaced after API response
+        _logIdsByHabit[habit.id] = '__pending__';
+      } else {
+        _loggedToday.remove(habit.id);
+        _logIdsByHabit.remove(habit.id);
+      }
+    });
+
     try {
       if (!checked) {
-        final logId = _logIdsByHabit[habit.id];
-        if (logId == null) return;
+        final logId = previousLogIds[habit.id];
+        if (logId == null || logId == '__pending__') return;
         await _apiService.deleteLog(logId);
       } else {
-        await _apiService.logHabit(habit.id, _today);
+        final result = await _apiService.logHabit(habit.id, _today);
+        final logId = result['id']?.toString();
+        if (mounted && logId != null) {
+          setState(() => _logIdsByHabit[habit.id] = logId);
+        }
       }
-      await _loadData();
+
       // Fire confetti if all habits done
-      final allDone = _habits.isNotEmpty && _habits.every((h) => _loggedToday.contains(h.id));
-      if (allDone && !_allDoneConfettiFired) {
-        _allDoneConfettiFired = true;
-        _confettiController.play();
+      if (mounted) {
+        final allDone = _habits.isNotEmpty && _habits.every((h) => _loggedToday.contains(h.id));
+        if (allDone && !_allDoneConfettiFired) {
+          _allDoneConfettiFired = true;
+          _confettiController.play();
+        }
       }
     } catch (_) {
+      // Roll back optimistic update on failure
       if (!mounted) return;
+      setState(() {
+        _loggedToday
+          ..clear()
+          ..addAll(previousLogged);
+        _logIdsByHabit
+          ..clear()
+          ..addAll(previousLogIds);
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Failed to update habit log.')),
       );
@@ -251,22 +282,29 @@ class _HomeScreenState extends State<HomeScreen> {
                                           progress == 1.0 ? Colors.green : colorScheme.primary,
                                         ),
                                       ),
-                                      Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            '$doneCount/${visibleHabits.length}',
-                                            style: theme.textTheme.titleLarge?.copyWith(
-                                              fontWeight: FontWeight.bold,
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              child: Text(
+                                                '$doneCount/${visibleHabits.length}',
+                                                style: theme.textTheme.titleLarge?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                maxLines: 1,
+                                              ),
                                             ),
-                                          ),
-                                          Text(
-                                            'done',
-                                            style: theme.textTheme.bodySmall?.copyWith(
-                                              color: colorScheme.onSurfaceVariant,
+                                            Text(
+                                              'done',
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: colorScheme.onSurfaceVariant,
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ],
                                   ),
