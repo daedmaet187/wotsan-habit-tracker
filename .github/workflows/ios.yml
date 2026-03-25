@@ -1,0 +1,48 @@
+name: iOS CI
+on:
+  push:
+    branches: [main]
+    paths: [mobile/**]
+  pull_request:
+    paths: [mobile/**]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: mobile
+      
+      - name: Install CocoaPods
+        run: |
+          cd mobile/ios
+          pod install --repo-update
+      
+      - name: Build iOS (Simulator)
+        run: |
+          flutter build ios --release --no-codesign --dart-define=API_URL=https://habit-api.stuff187.com
+        working-directory: mobile
+      
+      - name: Archive iOS App
+        run: |
+          cd mobile/build/ios/iphoneos
+          zip -r ../../../ios-app.zip Runner.app
+        continue-on-error: true
+      
+      - name: Upload iOS Build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-build
+          path: mobile/build/ios-app.zip
+          if-no-files-found: ignore

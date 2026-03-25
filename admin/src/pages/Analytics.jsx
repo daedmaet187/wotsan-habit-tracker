@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Download } from 'lucide-react';
 import {
   Area,
   AreaChart,
@@ -15,6 +16,7 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +30,30 @@ const toArray = (payload) => {
 };
 
 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function downloadCSV(filename, rows) {
+  if (!rows.length) return;
+  const headers = Object.keys(rows[0]);
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => headers.map(h => {
+      const val = row[h] ?? '';
+      // Escape quotes and wrap in quotes if contains comma or quote
+      const str = String(val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }).join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
 
 export default function Analytics() {
   const [range, setRange] = useState('30');
@@ -82,24 +108,65 @@ export default function Analytics() {
     : 0;
   const maxTopHabit = Math.max(...topHabits.map((habit) => habit.log_count || 0), 1);
 
+  const exportUserGrowth = useCallback(() => {
+    downloadCSV('user-growth.csv', userGrowth.map(item => ({
+      date: item.date,
+      new_users: item.new_users || 0,
+    })));
+  }, [userGrowth]);
+
+  const exportCompletionTrend = useCallback(() => {
+    downloadCSV('completion-trend.csv', completionTrend.map(item => ({
+      date: item.date,
+      completion_rate: item.completion_rate || 0,
+    })));
+  }, [completionTrend]);
+
+  const exportTopHabits = useCallback(() => {
+    downloadCSV('top-habits.csv', topHabits.map((habit, index) => ({
+      rank: index + 1,
+      name: habit.name || 'Untitled',
+      user_email: habit.user_email || '',
+      frequency: habit.frequency || '',
+      log_count: habit.log_count || 0,
+    })));
+  }, [topHabits]);
+
+  const exportAll = useCallback(() => {
+    exportUserGrowth();
+    setTimeout(exportCompletionTrend, 100);
+    setTimeout(exportTopHabits, 200);
+  }, [exportUserGrowth, exportCompletionTrend, exportTopHabits]);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-3">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
           <p className="text-muted-foreground">Performance trends for growth, completion, and engagement.</p>
         </div>
-        <div className="w-48">
-          <Select value={range} onValueChange={setRange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={exportAll}
+            disabled={isLoading || !data}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+          <div className="w-48">
+            <Select value={range} onValueChange={setRange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="14">Last 14 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
