@@ -32,3 +32,45 @@ export const remove = async (req, res) => {
   if (rowCount === 0) return res.status(404).json({ error: 'Habit not found or unauthorized' });
   res.status(204).send();
 };
+
+export const getOne = async (req, res) => {
+  const habitId = req.params.id;
+  const userId = req.user.id;
+
+  // Get habit with log count
+  const { rows: habitRows } = await pool.query(
+    `SELECT h.*, 
+            (SELECT COUNT(*) FROM habit_logs WHERE habit_id = h.id) as log_count
+     FROM habits h 
+     WHERE h.id = $1 AND h.user_id = $2`,
+    [habitId, userId]
+  );
+
+  if (!habitRows[0]) {
+    return res.status(404).json({ error: 'Habit not found or unauthorized' });
+  }
+
+  // Calculate current streak (consecutive days from today going backwards)
+  const { rows: streakRows } = await pool.query(
+    `WITH dated_logs AS (
+      SELECT DISTINCT logged_date::date as log_date
+      FROM habit_logs
+      WHERE habit_id = $1
+      ORDER BY log_date DESC
+    ),
+    with_gaps AS (
+      SELECT log_date, 
+             log_date - (ROW_NUMBER() OVER (ORDER BY log_date DESC))::int AS grp
+      FROM dated_logs
+    )
+    SELECT COUNT(*)::int as streak
+    FROM with_gaps
+    WHERE grp = (SELECT grp FROM with_gaps WHERE log_date = CURRENT_DATE LIMIT 1)`,
+    [habitId]
+  );
+
+  const habit = habitRows[0];
+  habit.current_streak = streakRows[0]?.streak || 0;
+
+  res.json(habit);
+};

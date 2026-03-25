@@ -6,6 +6,7 @@ import * as c from '../controllers/habitsController.js';
 const router = Router();
 
 router.get('/', auth, c.getAll);
+router.get('/:id', auth, c.getOne);
 router.post('/', auth, validate(schemas.createHabit), c.create);
 router.put('/:id', auth, validate(schemas.updateHabit), c.update);
 router.delete('/:id', auth, c.remove);

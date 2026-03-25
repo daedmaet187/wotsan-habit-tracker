@@ -30,6 +30,18 @@ export const schemas = {
     target_days: z.number().int().positive().optional(),
     is_active: z.boolean().optional(),
   }),
+
+  updateProfile: z.object({
+    full_name: z.string().min(1).max(100).optional(),
+    current_password: z.string().min(6).optional(),
+    new_password: z.string().min(6).optional(),
+  }).refine(
+    data => data.full_name || data.current_password,
+    { message: 'Either full_name or current_password must be provided' }
+  ).refine(
+    data => !data.new_password || data.current_password,
+    { message: 'current_password is required when changing password' }
+  ),
 };
 
 /**
