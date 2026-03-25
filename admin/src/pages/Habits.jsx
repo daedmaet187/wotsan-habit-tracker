@@ -1,11 +1,27 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowUpDown } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowUpDown, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import api from '@/lib/api';
 
 const sortOptions = {
@@ -37,10 +53,155 @@ const colorClassFromHabit = (colorValue = '') => {
   return 'bg-sky-500';
 };
 
+const colorOptions = [
+  { value: '#6366f1', label: 'Indigo', class: 'bg-indigo-500' },
+  { value: '#ef4444', label: 'Red', class: 'bg-red-500' },
+  { value: '#22c55e', label: 'Green', class: 'bg-emerald-500' },
+  { value: '#eab308', label: 'Yellow', class: 'bg-amber-500' },
+  { value: '#a855f7', label: 'Purple', class: 'bg-purple-500' },
+  { value: '#ec4899', label: 'Pink', class: 'bg-pink-500' },
+  { value: '#f97316', label: 'Orange', class: 'bg-orange-500' },
+  { value: '#0ea5e9', label: 'Sky', class: 'bg-sky-500' },
+];
+
+function EditHabitModal({ habit, onClose, onSuccess }) {
+  const [form, setForm] = useState({
+    name: habit?.name || '',
+    description: habit?.description || '',
+    color: habit?.color || '#6366f1',
+    icon: habit?.icon || '',
+    frequency: habit?.frequency || 'daily',
+    is_active: habit?.is_active ?? true,
+  });
+
+  const queryClient = useQueryClient();
+
+  const updateMutation = useMutation({
+    mutationFn: (data) => api.put(`/api/admin/habits/${habit.id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-habits'] });
+      onSuccess?.();
+      onClose();
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    updateMutation.mutate(form);
+  };
+
+  if (!habit) return null;
+
+  return (
+    <Dialog open={!!habit} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Habit</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Name</Label>
+            <Input
+              id="name"
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Input
+              id="description"
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <div className="flex gap-2 flex-wrap">
+              {colorOptions.map((color) => (
+                <button
+                  key={color.value}
+                  type="button"
+                  className={`h-8 w-8 rounded-full ${color.class} ${
+                    form.color === color.value ? 'ring-2 ring-offset-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setForm((f) => ({ ...f, color: color.value }))}
+                  title={color.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="icon">Icon (emoji or text)</Label>
+            <Input
+              id="icon"
+              value={form.icon}
+              onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))}
+              placeholder="e.g. 🏃 or running"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="frequency">Frequency</Label>
+            <Select
+              value={form.frequency}
+              onValueChange={(value) => setForm((f) => ({ ...f, frequency: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="daily">Daily</SelectItem>
+                <SelectItem value="weekly">Weekly</SelectItem>
+                <SelectItem value="monthly">Monthly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select
+              value={form.is_active ? 'active' : 'inactive'}
+              onValueChange={(value) => setForm((f) => ({ ...f, is_active: value === 'active' }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {updateMutation.isError && (
+            <p className="text-sm text-destructive">Failed to update habit. Please try again.</p>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Habits() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState(sortOptions.log_count);
   const [direction, setDirection] = useState('desc');
+  const [editingHabit, setEditingHabit] = useState(null);
 
   const { data: habits = [], isLoading, isError } = useQuery({
     queryKey: ['admin-habits'],
@@ -90,7 +251,7 @@ export default function Habits() {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Habits</h2>
-        <p className="text-muted-foreground">Read-only overview of all user habits across the platform.</p>
+        <p className="text-muted-foreground">View and manage all user habits across the platform.</p>
       </div>
 
       <Card>
@@ -174,7 +335,19 @@ export default function Habits() {
                         {habit.created_at ? new Date(habit.created_at).toLocaleDateString() : '—'}
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">Read-only • Contact owner to archive</span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setEditingHabit(habit)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" />
+                              Edit
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit habit details</TooltipContent>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   ))
@@ -184,6 +357,11 @@ export default function Habits() {
           ) : null}
         </CardContent>
       </Card>
+
+      <EditHabitModal
+        habit={editingHabit}
+        onClose={() => setEditingHabit(null)}
+      />
     </div>
   );
 }
