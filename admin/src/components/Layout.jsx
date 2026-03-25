@@ -35,6 +35,7 @@ const navItems = [
   { to: '/activity', label: 'Activity', icon: Activity },
 ];
 
+// eslint-disable-next-line no-unused-vars
 function NavItem({ to, label, icon: Icon, collapsed }) {
   const location = useLocation();
   const active = location.pathname === to;

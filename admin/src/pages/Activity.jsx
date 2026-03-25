@@ -32,27 +32,23 @@ const dotColorClass = (colorValue = '') => {
 
 export default function Activity() {
   const [search, setSearch] = useState('');
-  const [lastUpdated, setLastUpdated] = useState(new Date());
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['admin-activity'],
     queryFn: () => api.get('/api/admin/activity').then((r) => r.data),
     refetchInterval: 30000,
   });
 
-  useEffect(() => {
-    if (data) setLastUpdated(new Date());
-  }, [data]);
-
   const [secondsAgo, setSecondsAgo] = useState(0);
 
   useEffect(() => {
+    const lastUpdatedTime = dataUpdatedAt || Date.now();
     const id = window.setInterval(() => {
-      setSecondsAgo(Math.max(0, Math.floor((Date.now() - lastUpdated.getTime()) / 1000)));
+      setSecondsAgo(() => Math.max(0, Math.floor((Date.now() - lastUpdatedTime) / 1000)));
     }, 1000);
 
     return () => window.clearInterval(id);
-  }, [lastUpdated]);
+  }, [dataUpdatedAt]);
 
   const activity = toArray(data);
 
